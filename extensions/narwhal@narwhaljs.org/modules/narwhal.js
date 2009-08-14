@@ -11,7 +11,7 @@
 EXPORTED_SYMBOLS = ["global", "require", "print", "system"];
 const Cc = Components.classes;
 const Ci = Components.interfaces;
-var global = Cc["@narwhaljs.org/narwzilla/global;1"].createInstance(Ci.nsINarwhal).system.global;
+var global = Cc["@narwhaljs.org/xulrunner/global;1"].createInstance(Ci.nsINarwhal).system.global;
 var require = global.require;
 var print = global.print;
 var system = global.system;
