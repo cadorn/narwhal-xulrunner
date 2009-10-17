@@ -89,6 +89,7 @@
     var path = getFile(NARWHAL_HOME, 'narwhal.js').path;
     var narwhal = Cu.evalInSandbox(read(path), global, "1.8", path, 0);
     global.arguments = global.arguments || args;
+
     narwhal({
         system: {
             global: global,
@@ -99,10 +100,10 @@
             os: Cc["@mozilla.org/xre/app-info;1"].getService(Ci.nsIXULRuntime).OS,
             print: print,
             prefix: NARWHAL_HOME,
-            prefixes: [NARWHAL_HOME],
+            prefixes: [NARWHAL_ENGINE_HOME, NARWHAL_HOME],
             debug: debug,
-            verbose: verbose,
-            path: NARWHAL_PATH
+            verbose: verbose
+//            path: NARWHAL_PATH
         },
         file: {
             read: read,
