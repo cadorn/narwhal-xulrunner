@@ -21,7 +21,7 @@
         args = Env.exists("NARWHAL_ARGUMENTS") ? Env.get("NARWHAL_ARGUMENTS").split(" ") : null;
 
     function print (message) {
-        dump(message + '\n')
+        dump(message + "\n");
     }
 
     function getFileUri(file) {
@@ -79,7 +79,8 @@
         } else {
             scope = global;
         }
-        var source = "(function(require,exports,module,system,print){" + code +"/**/\n})";
+//        var source = "(function(require,exports,module,system,print){" + code +"/**/\n})";
+        var source = "(function(require,exports,module,system,print){try{" + code +"/**/\n}catch(e){print(e+' in "+path+"');}})";
         return Cu.evalInSandbox(source, scope, "1.8", path, lineNo);
     }
     function evaluateInGlobal(code, path, lineNo) {
@@ -91,6 +92,9 @@
     var path = getFile(NARWHAL_HOME, 'narwhal.js').path;
     var narwhal = Cu.evalInSandbox(read(path), global, "1.8", path, 0);
     global.arguments = global.arguments || args;
+
+//dump("NARWHAL_HOME: "+NARWHAL_HOME+"\n");
+//dump("NARWHAL_ENGINE_HOME: "+NARWHAL_ENGINE_HOME+"\n");
 
     narwhal({
         system: {

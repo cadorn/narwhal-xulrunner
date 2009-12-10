@@ -141,9 +141,9 @@ AppStartupBoot.prototype = {
 function bootstrapNarwhal(bootstrap) {
     if (bootstrap && bootstrap.exists())
         try {
-            if (!Env.exists(NARWHAL_HOME))
+//            if (!Env.exists(NARWHAL_HOME))
                 Env.set(NARWHAL_HOME, getResourceFile(EXTENSION_NARWHAL_URI).path);
-            if (!Env.exists(ENGINE_HOME))
+//            if (!Env.exists(ENGINE_HOME))
                 Env.set(ENGINE_HOME, getResourceFile(EXTENSION_ENGINE_URI).path);
             var sandbox = Cu.Sandbox(Cc["@mozilla.org/systemprincipal;1"].createInstance(Ci.nsIPrincipal));
             sandbox.args = ARGUMENTS;
