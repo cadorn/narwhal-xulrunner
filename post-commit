@@ -35,3 +35,4 @@ files="narwhal/*.js narwhal/*.json narwhal/lib narwhal/packages/jack narwhal/eng
 zip -r $extension $files > /dev/null
 
 cd $origin
+
