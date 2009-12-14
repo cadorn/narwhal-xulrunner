@@ -80,13 +80,13 @@
             scope = global;
         }
 //        var source = "(function(require,exports,module,system,print){" + code +"/**/\n})";
-        var source = "(function(require,exports,module,system,print){try{" + code +"/**/\n}catch(e){print(e+' in "+path+"');}})";
+        var source = "(function(require,exports,module,system,print){try{" + code +"/**/\n}catch(e){system.log.error(e);}})";
         return Cu.evalInSandbox(source, scope, "1.8", path, lineNo);
     }
     function evaluateInGlobal(code, path, lineNo) {
         lineNo = lineNo || 0;
         path = path || "anonymus";
-        var source = "(function(require,exports,module,system,print){" + code +"/**/\n})";
+        var source = "(function(require,exports,module,system,print){try{" + code +"/**/\n}catch(e){system.log.error(e);}})";
         return Cu.evalInSandbox(source, global, "1.8", path, lineNo);
     }
     var path = getFile(NARWHAL_HOME, 'narwhal.js').path;
