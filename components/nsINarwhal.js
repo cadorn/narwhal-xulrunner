@@ -18,7 +18,6 @@ var PATH = "NARWHAL_PATH";
 var JS_PATH = "JS_PATH";
 var APP_STARTUP = "app-startup";
 var PROFILE_READY = "profile-do-change";
-var ARGUMENTS = [];
 
 var EXTENSION_BOOTSTRAP_URI = "resource://narwhal-xulrunner/bootstrap.js";
 var EXTENSION_ENGINE_URI = "resource://narwhal-xulrunner/";
@@ -142,7 +141,6 @@ function bootstrapNarwhal(bootstrap) {
 //            if (!Env.exists(ENGINE_HOME))
                 Env.set(ENGINE_HOME, getResourceFile(EXTENSION_ENGINE_URI).path);
             var sandbox = Cu.Sandbox(Cc["@mozilla.org/systemprincipal;1"].createInstance(Ci.nsIPrincipal));
-            //sandbox.args = ARGUMENTS;
             Cu.evalInSandbox(readFile(bootstrap), sandbox, "1.8", bootstrap.path, 0);
             Narwhal.prototype.__proto__ = sandbox;
         } catch(e) {
