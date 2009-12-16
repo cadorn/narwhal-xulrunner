@@ -8,6 +8,7 @@ const Cu = Components.utils;
 const Env = Cc["@mozilla.org/process/environment;1"].getService(Ci.nsIEnvironment);
 const ResourceHandler = Cc['@mozilla.org/network/protocol;1?name=resource'].getService(Ci.nsIResProtocolHandler);
 const IOService = Cc['@mozilla.org/network/io-service;1'].getService(Ci.nsIIOService)
+const ScriptableStream = Cc["@mozilla.org/scriptableinputstream;1"].getService(Ci.nsIScriptableInputStream);
 const FileService = IOService.getProtocolHandler("file").QueryInterface(Ci.nsIFileProtocolHandler);
 const ObserverService = Cc["@mozilla.org/observer-service;1"].getService(Ci.nsIObserverService);
 Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
@@ -22,6 +23,57 @@ var PROFILE_READY = "profile-do-change";
 var EXTENSION_BOOTSTRAP_URI = "resource://narwhal-xulrunner/bootstrap.js";
 var EXTENSION_ENGINE_URI = "resource://narwhal-xulrunner/";
 var EXTENSION_NARWHAL_URI = "resource://narwhal/";
+var EXTENSION_DEBUG = false;
+var EXTENSION_VERBOSE = false;
+
+
+/**
+ * Load profile-wide narwhal config from <ProfileDirectory>/narwhal.json.
+ * The URIs specified in this config are used during the bootstrapping process.
+ */
+function loadNarwhalConfig() {
+    try {
+        var prefFile = Cc["@mozilla.org/file/directory_service;1"].getService(Ci.nsIProperties).get("ProfD", Ci.nsIFile);
+        prefFile.append("narwhal.json");
+        if(!prefFile.exists()) {
+            writeFile(prefFile, JSON.stringify({
+                "BOOTSTRAP_URI": EXTENSION_BOOTSTRAP_URI,
+                "ENGINE_URI": EXTENSION_ENGINE_URI,
+                "NARWHAL_URI": EXTENSION_NARWHAL_URI,
+                "DEBUG": EXTENSION_DEBUG,
+                "VERBOSE": EXTENSION_VERBOSE
+            }));
+        }
+        var config = JSON.parse(readFile(prefFile));
+        if(config.hasOwnProperty("BOOTSTRAP_URI"))
+            EXTENSION_BOOTSTRAP_URI = config.BOOTSTRAP_URI;
+        if(config.hasOwnProperty("ENGINE_URI"))
+            EXTENSION_ENGINE_URI = config.ENGINE_URI;
+        if(config.hasOwnProperty("NARWHAL_URI"))
+            EXTENSION_NARWHAL_URI = config.NARWHAL_URI;
+        if(config.hasOwnProperty("DEBUG"))
+            EXTENSION_DEBUG = config.DEBUG;
+        if(config.hasOwnProperty("VERBOSE"))
+            EXTENSION_VERBOSE = config.VERBOSE;
+    } catch(e) {
+        if (e.message) dump(e.message + "\n");
+        if (e.stack) dump(e.stack + "\n");
+    }
+}
+
+/**
+ * Utility function which writes data to a file
+ * @param {nsIFile} file
+ * @param {String} data
+ */
+function writeFile(file, data) {
+    var foStream = Cc["@mozilla.org/network/file-output-stream;1"].createInstance(Ci.nsIFileOutputStream);
+    foStream.init(file, 0x02 | 0x08 | 0x20, 0666, 0); 
+    var converter = Cc["@mozilla.org/intl/converter-output-stream;1"].createInstance(Ci.nsIConverterOutputStream);
+    converter.init(foStream, "UTF-8", 0, 0);
+    converter.writeString(data);
+    converter.close();
+}
 
 /**
  * Utility function which returns file for a correspoding path.
@@ -43,26 +95,36 @@ function getFile(path) {
  */
 function getFileUri(file) FileService.getURLSpecFromFile(file);
 function readFile(file) {
-    const MODE_RDONLY = 0x01;
-    const PERMS_FILE = 0644;
-    var result = [];
-    try {
-        var fis = Cc["@mozilla.org/network/file-input-stream;1"].createInstance(Ci.nsIFileInputStream);
-        fis.init(file, MODE_RDONLY, PERMS_FILE, false);
-        var lis = fis.QueryInterface(Ci.nsILineInputStream);
-        var line = { value: null };
-        var haveMore;
-        do {
-            haveMore = lis.readLine(line)
-            result.push(line.value);
-        } while (haveMore)
-    } catch(e) {
-        if (e.message) dump(e.message + "\n");
-        if (e.stack) dump(e.stack + "\n");
-    } finally {
-        fis.close();
+    if(file instanceof Ci.nsIFile) {
+        const MODE_RDONLY = 0x01;
+        const PERMS_FILE = 0644;
+        var result = [];
+        try {
+            var fis = Cc["@mozilla.org/network/file-input-stream;1"].createInstance(Ci.nsIFileInputStream);
+            fis.init(file, MODE_RDONLY, PERMS_FILE, false);
+            var lis = fis.QueryInterface(Ci.nsILineInputStream);
+            var line = { value: null };
+            var haveMore;
+            do {
+                haveMore = lis.readLine(line)
+                result.push(line.value);
+            } while (haveMore)
+        } catch(e) {
+            if (e.message) dump(e.message + "\n");
+            if (e.stack) dump(e.stack + "\n");
+        } finally {
+            fis.close();
+        }
+        return result.join('\n');        
+    } else {
+        var channel = IOService.newChannel(file.url, null, null);
+        var input = channel.open();
+        ScriptableStream.init(input);
+        var str = ScriptableStream.read(input.available());
+        ScriptableStream.close();
+        input.close();
+        return str;
     }
-    return result.join('\n');
 }
 
 /**
@@ -122,7 +184,14 @@ AppStartupBoot.prototype = {
     },
     boot: function() {
         try {
-            bootstrapNarwhal(getResourceFile(EXTENSION_BOOTSTRAP_URI));
+            loadNarwhalConfig();
+            bootstrapNarwhal({
+                "url": EXTENSION_BOOTSTRAP_URI,
+                "exists": function() {
+                    // TODO: Check with protocol handler to ensure URL does in fact exist
+                    return true;
+                }
+            });
         } finally {
             this.unregister();
         }
@@ -136,10 +205,10 @@ AppStartupBoot.prototype = {
 function bootstrapNarwhal(bootstrap) {
     if (bootstrap && bootstrap.exists())
         try {
-//            if (!Env.exists(NARWHAL_HOME))
-                Env.set(NARWHAL_HOME, getResourceFile(EXTENSION_NARWHAL_URI).path);
-//            if (!Env.exists(ENGINE_HOME))
-                Env.set(ENGINE_HOME, getResourceFile(EXTENSION_ENGINE_URI).path);
+            Env.set("nsINarwhal_NARWHAL_URI", EXTENSION_NARWHAL_URI);
+            Env.set("nsINarwhal_ENGINE_URI", EXTENSION_ENGINE_URI);
+            Env.set("nsINarwhal_DEBUG", (EXTENSION_DEBUG)?"true":"false");
+            Env.set("nsINarwhal_VERBOSE", (EXTENSION_VERBOSE)?"true":"false");
             var sandbox = Cu.Sandbox(Cc["@mozilla.org/systemprincipal;1"].createInstance(Ci.nsIPrincipal));
             Cu.evalInSandbox(readFile(bootstrap), sandbox, "1.8", bootstrap.path, 0);
             Narwhal.prototype.__proto__ = sandbox;

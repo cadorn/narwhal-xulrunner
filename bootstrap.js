@@ -5,21 +5,39 @@
  * Bootstrap file for the XULRunner engine.
  */
 (function(global, evalGlobal) {
-    global.Cc = Components.classes;
-    global.Ci = Components.interfaces;
+    var Cc = global.Cc = Components.classes;
+    var Ci = global.Ci = Components.interfaces;
     global.Cu = Components.utils;
     global.Cr = Components.results;
     global.CC = Components.Constructor;
+
+    const IOService = Cc['@mozilla.org/network/io-service;1'].getService(Ci.nsIIOService)
+    const ScriptableStream = Cc["@mozilla.org/scriptableinputstream;1"].getService(Ci.nsIScriptableInputStream);
+
     var Env = Cc["@mozilla.org/process/environment;1"].getService(Ci.nsIEnvironment),
-        NARWHAL_PATH = Env.exists("NARWHAL_PATH") ? Env.get("NARWHAL_PATH") : null,
-        NARWHAL_HOME = Env.exists("NARWHAL_HOME") ? Env.get("NARWHAL_HOME") : null,
-        NARWHAL_ENGINE_HOME = Env.exists("NARWHAL_ENGINE_HOME") ? Env.get("NARWHAL_ENGINE_HOME") : null,
-        debug =  Env.exists("NARWHAL_DEBUG") ? Env.get("NARWHAL_DEBUG") : false,
-        verbose = Env.exists("NARWHAL_VERBOSE") ? Env.get("NARWHAL_VERBOSE") : false,
+        NARWHAL_HOME = trimTailingSlash(Env.get("nsINarwhal_NARWHAL_URI")),
+        NARWHAL_ENGINE_HOME = trimTailingSlash(Env.get("nsINarwhal_ENGINE_URI")),
+        debug = (Env.get("nsINarwhal_DEBUG")=="true")? true : false,
+        verbose = (Env.get("nsINarwhal_VERBOSE")=="true")? true : false,
         moduleScopingEnabled = false;
+
+    function trimTailingSlash(subject) {
+        if(subject.substr(subject.length-1,1)!="/") {
+            return subject;
+        }
+        return subject.substr(0, subject.length-1);
+    }
 
     function print (message) {
         dump(message + "\n");
+    }
+
+    function joinPath() {
+        var parts = [];
+        for( var i=0 ; i<arguments.length ; i++ ) {
+            parts.push(arguments[i]);
+        }
+        return parts.join("/");
     }
 
     function getFileUri(file) {
@@ -28,43 +46,38 @@
             .getURLSpecFromFile(file);
     }
 
-    function getFile(path) {
-        var file = Cc['@mozilla.org/file/local;1'].createInstance(Ci.nsILocalFile);
-        file.initWithPath(path);
-        for (var i=1; i < arguments.length; i++) file.append(arguments[i])
-        return file;
+    function fixPathUri(path) {
+        if(!/^resource:\/[^\/].*/.test(path)) return path;
+        return "resource://" + path.substr(10);
     }
 
     function read(path) {
-        const MODE_RDONLY = 0x01;
-        const PERMS_FILE = 0644;
-        var result = [];
-        try {
-            var fis = Cc["@mozilla.org/network/file-input-stream;1"].createInstance(Ci.nsIFileInputStream);
-            fis.init(getFile(path), MODE_RDONLY, PERMS_FILE, false);
-            var lis = fis.QueryInterface(Ci.nsILineInputStream);
-            var line = { value: null };
-            var haveMore;
-            do {
-                haveMore = lis.readLine(line)
-                result.push(line.value);
-            } while (haveMore)
-        } catch(e) {
-            print('Error:' + e.message);
-            print('Stack:' + e.stack);
-        } finally {
-            fis.close();
-        }
-        return result.join('\n');
+        path = fixPathUri(path);
+        var channel = IOService.newChannel(path, null, null);
+        var input = channel.open();
+        ScriptableStream.init(input);
+        var str = ScriptableStream.read(input.available());
+        ScriptableStream.close();
+        input.close();
+        return str;
     }
 
     function isFile(path) {
+        path = fixPathUri(path);
+        var input,
+            isFile = false;
+        // TODO: Use something other than try/catch to detect if path is a file
         try {
-            var file = getFile(path);
-            return (file.exists() && file.isFile());
-        } catch (e) {
-            return false;
-        }
+            var channel = IOService.newChannel(path, null, null);
+            input = channel.open();
+            ScriptableStream.init(input);
+            ScriptableStream.read(1);
+            ScriptableStream.close();
+            isFile = true;
+        } catch(e) {}
+        
+        if(input) input.close();
+        return isFile;
     }
 
     function evaluateInSandbox(code, path, lineNo) {
@@ -77,16 +90,16 @@
         } else {
             scope = global;
         }
-        var source = "(function(require,exports,module,system,print){try{" + code +"/**/\n}catch(e){system.log.error(e);}})";
+        var source = "(function(require,exports,module,system,print){try{" + code +"/**/\n}catch(e){(system.log)?system.log.error(e):dump('ERROR[evaluateInSandbox]: '+e);}})";
         return Cu.evalInSandbox(source, scope, "1.8", path, lineNo);
     }
     function evaluateInGlobal(code, path, lineNo) {
         lineNo = lineNo || 0;
         path = path || "anonymus";
-        var source = "(function(require,exports,module,system,print){try{" + code +"/**/\n}catch(e){system.log.error(e);}})";
+        var source = "(function(require,exports,module,system,print){try{" + code +"/**/\n}catch(e){(system.log)?system.log.error(e):dump('ERROR[evaluateInGlobal]: '+e);}})";
         return Cu.evalInSandbox(source, global, "1.8", path, lineNo);
     }
-    var path = getFile(NARWHAL_HOME, 'narwhal.js').path;
+    var path = joinPath(NARWHAL_HOME, 'narwhal.js');
     var narwhal = Cu.evalInSandbox(read(path), global, "1.8", path, 0);
     narwhal({
         global: global,
@@ -104,8 +117,7 @@
         },
         prefix: NARWHAL_HOME,
         prefixes: [NARWHAL_ENGINE_HOME, NARWHAL_HOME],
-        enginePrefix: NARWHAL_ENGINE_HOME,
-        path: NARWHAL_PATH
+        enginePrefix: NARWHAL_ENGINE_HOME
     });
 
 })(this, function () {
