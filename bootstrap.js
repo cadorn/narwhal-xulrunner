@@ -47,6 +47,7 @@
     }
 
     function fixPathUri(path) {
+        path = path.replace(/\\/g, "/");
         if(!/^resource:\/[^\/].*/.test(path)) return path;
         return "resource://" + path.substr(10);
     }
