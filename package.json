@@ -25,10 +25,7 @@
     ],
     "pinf": {
         "builder": {
-            "catalog": "http://registry.pinf.org/cadorn.org/github/narwhalrunner/packages/catalog.json",
-            "name": "devtools",
-            "revision": "master",
-            "module": "builders/narwhal-xulrunner-extension"
+            "module": "builders/extension"
         }
     }
 }
