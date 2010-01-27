@@ -1,8 +1,34 @@
 {
+    "uid": "http://registry.pinf.org/cadorn.org/github/narwhal-xulrunner/",
     "name": "narwhal-xulrunner",
     "engine": "xulrunner",
-    "dependencies": ["narwhal"],
+    "dependencies": {
+        "narwhal": {
+            "catalog": "http://registry.pinf.org/cadorn.org/github/catalog.json",
+            "name": "narwhal",
+            "revision": "experimental"
+        },
+        "jack": {
+            "catalog": "http://registry.pinf.org/cadorn.org/github/catalog.json",
+            "name": "jack",
+            "revision": "master"
+        }
+    },
     "author": "Irakli Gozalishvili (http://rfobic.wordpress.com/)",
     "description": "XULRunner engine support for Narwhal",
-    "keywords": ["narwhal", "engine", "xulrunner", "mozilla", "extension"]
+    "keywords": [
+        "narwhal",
+        "engine",
+        "xulrunner",
+        "mozilla",
+        "extension"
+    ],
+    "pinf": {
+        "builder": {
+            "catalog": "http://registry.pinf.org/cadorn.org/github/narwhalrunner/packages/catalog.json",
+            "name": "devtools",
+            "revision": "master",
+            "module": "builders/narwhal-xulrunner-extension"
+        }
+    }
 }
