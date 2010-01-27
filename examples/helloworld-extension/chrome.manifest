@@ -1,0 +1,4 @@
+
+content  narwhal-helloworld-extension  chrome/content/
+
+overlay  chrome://browser/content/browser.xul         chrome://narwhal-helloworld-extension/content/browserOverlay.xul

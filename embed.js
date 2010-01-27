@@ -14,4 +14,4 @@
     scope.system = narwhal.system;
     scope.print = narwhal.print;
     scope.require = narwhal.require;
-})(this)
+})(this);

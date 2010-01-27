@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<overlay id="sample" 
+         xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
+
+    
+    <script type="application/x-javascript">
+        
+        // Get access to the sandbox service
+        var sandbox = {};
+        Components.utils.import('resource://narwhal-xulrunner/sandbox.js', sandbox);
+        
+        // Define a program to call
+        var program = {
+            "type": "extension",
+            "id": "narwhal-helloworld-extension@narwhaljs.org"
+        };
+        
+        // Load a module from the program via the sandbox
+        var HELLOWORLD = sandbox.get(program).require("helloworld");
+        
+        // Wait for page to load        
+        window.addEventListener("load", function() {
+            
+            // Update status bar message with string from program module
+            document.getElementById("my-status-panel").setAttribute("label", HELLOWORLD.getMessage());
+
+        }, false);
+        
+    </script>
+
+    <statusbar id="status-bar">
+        <statusbarpanel id="my-status-panel" label="loading..."  />
+    </statusbar>
+</overlay>
