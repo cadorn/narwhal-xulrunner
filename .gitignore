@@ -3,4 +3,6 @@ builds
 .mobwrite
 mozrepl@hyperstruct.net
 app/updates
-/local/
+/.build/
+/.pinf-workspace.json
+/bin/.pinf-activate-workspace
