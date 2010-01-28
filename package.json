@@ -1,5 +1,4 @@
 {
-    "uid": "http://registry.pinf.org/cadorn.org/github/narwhal-xulrunner/",
     "name": "narwhal-xulrunner",
     "engine": "xulrunner",
     "dependencies": {
