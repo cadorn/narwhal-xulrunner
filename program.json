@@ -8,7 +8,7 @@
                     "locator": {
                         "catalog": "http://registry.pinf.org/cadorn.org/github/catalog.json",
                         "name": "narwhal",
-                        "version": "0.0.0rev-685a9c44521ccdfdf95213eee6329a460857c898"
+                        "revision": "0.0.0rev-685a9c44521ccdfdf95213eee6329a460857c898"
                     }
                 }
             },
@@ -18,7 +18,7 @@
                     "locator": {
                         "catalog": "http://registry.pinf.org/cadorn.org/github/catalog.json",
                         "name": "jack",
-                        "version": "0.0.0rev-1acfece4dd70b7b7f7b1ab467746af502e346836"
+                        "revision": "0.0.0rev-1acfece4dd70b7b7f7b1ab467746af502e346836"
                     }
                 }
             }
