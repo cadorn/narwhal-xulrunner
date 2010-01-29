@@ -1,27 +1,61 @@
 {
     "name": "narwhal-xulrunner",
-    "engine": "xulrunner",
-    "dependencies": {
-        "narwhal": {
-            "catalog": "http://registry.pinf.org/cadorn.org/github/catalog.json",
-            "name": "narwhal",
-            "revision": "experimental"
-        },
-        "jack": {
-            "catalog": "http://registry.pinf.org/cadorn.org/github/catalog.json",
-            "name": "jack",
-            "revision": "master"
-        }
-    },
-    "author": "Irakli Gozalishvili (http://rfobic.wordpress.com/)",
     "description": "XULRunner engine support for Narwhal",
-    "keywords": [
-        "narwhal",
-        "engine",
-        "xulrunner",
-        "mozilla",
-        "extension"
+    "engine": "xulrunner",
+    "version": "0.1.0",
+    "keywords": ["narwhal", "engine", "xulrunner", "mozilla", "extension"],
+    "maintainers": [
+        {
+            "name": "Irakli Gozalishvili",
+            "email": "rfobic@gmail.com",
+            "web": "http://rfobic.wordpress.com/"
+        },
+        {
+            "name": "Christoph Dorn",
+            "email": "christoph@christophdorn.com",
+            "web": "http://www.christophdorn.com/"
+        }
     ],
+    "contributors": [
+        {
+            "name": "Irakli Gozalishvili",
+            "email": "rfobic@gmail.com",
+            "web": "http://rfobic.wordpress.com/"
+        },
+        {
+            "name": "Christoph Dorn",
+            "email": "christoph@christophdorn.com",
+            "web": "http://www.christophdorn.com/"
+        },
+        {
+            "name": "Kris Kowal",
+            "email": "kris.kowal@cixar.com",
+            "web": "http://askawizard.blogspot.com/"
+        },
+        {
+            "name": "Zach Carter",
+            "web": "http://zaa.ch/"
+        }
+    ],
+    "bugs": { "web": "http://github.com/Gozala/narwhal-xulrunner/issues/" },
+    "licenses": [
+        { "type": "MPL" },
+        { "type": "GPL 2.0" },
+        { "type": "LGPL 2.1" },
+        { "type": "MIT" }
+    ],
+    "repositories": [
+        {
+            "type": "git",
+            "url": "git://github.com/Gozala/narwhal-xulrunner.git",
+        }
+    ],
+    "os": ["linux", "macos", "win"],
+    "cpu": ["x86", "ppc", "x86_64"],
+    "directories": {
+        "lib": "lib",
+        "bin": "bin"
+    },
     "pinf": {
         "builder": {
             "module": "builders/extension"
