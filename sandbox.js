@@ -13,6 +13,16 @@
     scope.EXPORTED_SYMBOLS = ["get"];
     var narwhal = {};
     Components.utils.import("resource://narwhal-xulrunner/embed.js", narwhal);
+
+    var UTIL = narwhal.require("util");
+    var FILE = narwhal.require("file");
+    var PACKAGES = narwhal.require("packages");
+    var Sandbox = narwhal.require("sandbox").Sandbox;
+    var LOADER = narwhal.require("loader");
+    LOADER.reassignFileModule(FILE);
+    var Loader = LOADER.Loader;
+    var JAR_LOADER = narwhal.require("jar-loader");
+
     var sandboxes = {};
     scope.get = function(program, module) {
         if(!program || !program.type || !program.id) {
@@ -23,15 +33,6 @@
             return sandboxes[key];
         }
         try {
-            var UTIL = narwhal.require("util");
-            var FILE = narwhal.require("file");
-            var PACKAGES = narwhal.require("packages");
-            var Sandbox = narwhal.require("sandbox").Sandbox;
-            var LOADER = narwhal.require("loader");
-            LOADER.reassignFileModule(FILE);
-            var Loader = LOADER.Loader;
-            var JAR_LOADER = narwhal.require("jar-loader");
-                
             // start with the program root path and locate all resources from there
             var programRootPath = FILE.Path(getPath(program, "/"));
         
@@ -52,9 +53,9 @@
             var loader = Loader({
                 // construct own loader paths to ensure predictable environment
                 "paths": [
-                    PACKAGES.usingCatalog["narwhal-xulrunner"].libPath,
-                    FILE.join(PACKAGES.usingCatalog["narwhal"].directory, "engines", "default", "lib"),
-                    PACKAGES.usingCatalog["narwhal"].libPath
+                    "resource://narwhal-xulrunner/lib",
+                    "resource://narwhal/engines/default/lib",
+                    "resource://narwhal/lib"
                 ]
             });
             var sandbox = Sandbox({
@@ -66,19 +67,24 @@
                 },
                 "debug": false
             });
-        
-            sandbox.force("system").env["SEA"] = programRootPath.valueOf();
+
+            system = sandbox.force("system");
+            system.env["SEA"] = programRootPath.valueOf();
+            system.sea = programRootPath.valueOf();
             sandbox("global");
-        
+
             // load packages from paths
             sandbox('packages').load([
-                programRootPath.valueOf()    // application/extension packages
+                programRootPath.valueOf(),          // application/extension packages
+                "resource://narwhal-xulrunner",
+                "resource://narwhal"
             ]);
 
             return sandboxes[key] = {
                 "require": function(id, pkg) {
                     return sandbox(id, null, pkg);
-                }
+                },
+                "system": system
             }
                 
         } catch(e) {
