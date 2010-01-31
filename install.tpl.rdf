@@ -2,12 +2,20 @@
 <RDF xmlns="http://www.w3.org/1999/02/22-rdf-syntax-ns#" 
      xmlns:em="http://www.mozilla.org/2004/em-rdf#">
     <Description about="urn:mozilla:install-manifest">
+
         <em:id>narwhal@narwhaljs.org</em:id>
-        <em:name>narwhal xulrunner engine</em:name>
+
+        <em:name>Narwhal for XULRunner</em:name>
         <em:version>%%VERSION%%</em:version>
-        <em:description>Narwhal xulrunner based engine</em:description>
-        <em:creator>Irakli Gozalishvili</em:creator>
+
+        <em:description>Narwhal for XULRunner</em:description>
+
+        <em:creator>Narwhal XULRunner Team</em:creator>
         <em:homepageURL>http://github.com/Gozala/narwhal-xulrunner</em:homepageURL>
+
+        <em:developer>Irakli Gozalishvili</em:developer>
+        <em:developer>Christoph Dorn</em:developer>
+        
         <em:type>2</em:type> <!-- type=extension --> 
         <em:targetApplication>
             <Description>
