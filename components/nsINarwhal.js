@@ -32,9 +32,13 @@ var EXTENSION_VERBOSE = false;
  * The URIs specified in this config are used during the bootstrapping process.
  */
 function loadNarwhalConfig() {
+
+    // TODO: This fails when running as an app extension. Need to get config file from a different location.
+
     try {
         var prefFile = Cc["@mozilla.org/file/directory_service;1"].getService(Ci.nsIProperties).get("ProfD", Ci.nsIFile);
         prefFile.append("narwhal.json");
+/* Do not write config by default. Only use it if available.         
         if(!prefFile.exists()) {
             writeFile(prefFile, JSON.stringify({
                 "BOOTSTRAP_URI": EXTENSION_BOOTSTRAP_URI,
@@ -44,6 +48,7 @@ function loadNarwhalConfig() {
                 "VERBOSE": EXTENSION_VERBOSE
             }));
         }
+*/        
         var config = JSON.parse(readFile(prefFile));
         if(config.hasOwnProperty("BOOTSTRAP_URI"))
             EXTENSION_BOOTSTRAP_URI = config.BOOTSTRAP_URI;

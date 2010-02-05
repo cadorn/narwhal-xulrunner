@@ -35,7 +35,7 @@
         try {
             // start with the program root path and locate all resources from there
             var programRootPath = FILE.Path(getPath(program, "/"));
-        
+
             if(programRootPath.join("using.jar").exists()) {
                 JAR_LOADER.registerJar(
                     programRootPath.join("using").valueOf(),
