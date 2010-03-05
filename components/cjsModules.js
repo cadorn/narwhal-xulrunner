@@ -12,6 +12,7 @@ const Ci = Components.interfaces;
 const Cr = Components.results;
 
 // http://wiki.commonjs.org/wiki/Modules/1.1
+/*
 var module =
 {
     // 1. In a module, there is a free variable "require", that is a Function.
@@ -39,6 +40,6 @@ var module =
         {
             return CONTRACT_ID;
         }
+    }
 }
-
-
+*/

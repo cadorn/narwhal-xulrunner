@@ -1,6 +1,9 @@
-resource narwhal file:narwhal/
-resource narwhal-xulrunner file:.
+
 content narwhal-xulrunner content/
-content narwhal content/narwhal
+content narwhal content/narwhal/
+
 content narwhal-xulrunner content/ contentaccessible=yes
-content narwhal content/narwhal contentaccessible=yes
+content narwhal content/narwhal/ contentaccessible=yes
+
+# To support Components.utils.import()
+resource narwhal-xulrunner content/

@@ -1,12 +1,44 @@
 
+/**
+ * @author Christoph Dorn
+ * 
+ * NOTE: This module needs some major love
+ * 
+ * Objectives:
+ *   
+ *   * Intercept narwhal related paths (chrome://narwhal-xulrunner/...) to direct them to extension files
+ *   * Transparently handle path juggling into jar files
+ *   * Correct for windows paths
+ *   
+ * TODO:
+ * 
+ *   * The narwhal FILE module is going to undergo some changes. It will allow conversion to a URI and back without
+ *     loosing data. Once this is working the logic below can be simplified a lot.
+ *   * Need to get a clear idea of how the paths come in on unix and windows and how they need to be converted at minimum.
+ *   
+ */
+
+function dump(msg)
+{
+//    Components.utils.reportError(msg);
+}
+
 var IO = require("./io").IO;
 var UTIL = require("util");
 
-const ResourceHandler = Cc['@mozilla.org/network/protocol;1?name=resource'].getService(Ci.nsIResProtocolHandler);
+//const ResourceHandler = Cc['@mozilla.org/network/protocol;1?name=resource'].getService(Ci.nsIResProtocolHandler);
 const IOService = Cc['@mozilla.org/network/io-service;1'].getService(Ci.nsIIOService)
+const ChromeRegistry = Cc['@mozilla.org/chrome/chrome-registry;1'].getService(Ci.nsIChromeRegistry)
 
-var NarwhalUriPath = ResourceHandler.resolveURI(IOService.newURI(system.env.nsINarwhal_NARWHAL_URI, null, null));
-var EngineUriPath = ResourceHandler.resolveURI(IOService.newURI(system.env.nsINarwhal_ENGINE_URI, null, null));
+
+var NarwhalUriPath = ChromeRegistry.convertChromeURL(IOService.newURI(system.env.nsINarwhal_NARWHAL_URI, null, null)).path;
+
+dump("NarwhalUriPath("+system.env.nsINarwhal_NARWHAL_URI+"): " + NarwhalUriPath);
+
+var EngineUriPath = ChromeRegistry.convertChromeURL(IOService.newURI(system.env.nsINarwhal_ENGINE_URI, null, null)).path;
+EngineUriPath = EngineUriPath.substr(0, EngineUriPath.length-21);
+
+dump("EngineUriPath("+system.env.nsINarwhal_ENGINE_URI+"): " + EngineUriPath);
 
 const isWindows = (/\bwindows\b/i.test(system.os) || /\bwinnt\b/i.test(system.os));
 
@@ -92,19 +124,23 @@ exports.registerJar = function(matchPath, archiveFile, basePath) {
 
 exports.mapPath = function(method, path) {
     path = fixPathUri(path);
+
+dump("mapPath:path: "+path);
     
-    // map resource:// URIs to filesystem paths if resources are not jarred
-    if(NarwhalUriPath && path.substr(0,system.env.nsINarwhal_NARWHAL_URI.length)==system.env.nsINarwhal_NARWHAL_URI) {
-        if(isWindows) {
-            path = path.replace(/\//g, "\\");
-        }
-        return {"path": NarwhalUriPath + path.substr(system.env.nsINarwhal_NARWHAL_URI.length)};
-    }
+    // map chrome:// URIs to filesystem paths if resources are not jarred
     if(EngineUriPath && path.substr(0,system.env.nsINarwhal_ENGINE_URI.length)==system.env.nsINarwhal_ENGINE_URI) {
         if(isWindows) {
             path = path.replace(/\//g, "\\");
         }
+dump("mapPath:EngineUriPath: "+EngineUriPath + "|<->|" + path.substr(system.env.nsINarwhal_ENGINE_URI.length));
         return {"path": EngineUriPath + path.substr(system.env.nsINarwhal_ENGINE_URI.length)};
+    }
+    if(NarwhalUriPath && path.substr(0,system.env.nsINarwhal_NARWHAL_URI.length)==system.env.nsINarwhal_NARWHAL_URI) {
+        if(isWindows) {
+            path = path.replace(/\//g, "\\");
+        }
+dump("mapPath:NarwhalUriPath: "+NarwhalUriPath + "|<->|" + path.substr(system.env.nsINarwhal_NARWHAL_URI.length));
+        return {"path": NarwhalUriPath + path.substr(system.env.nsINarwhal_NARWHAL_URI.length)};
     }
 
     for( var dir in jars ) {
@@ -131,10 +167,10 @@ exports.mapPath = function(method, path) {
 
 function fixPathUri(path) {
     path = path.replace(/\\/g, "/");
-    if(!/^resource:\/[^\/].*/.test(path)) {
+    if(!/^chrome:\/[^\/].*/.test(path)) {
         return path;
     }
-    return "resource://" + path.substr(10);
+    return "chrome://" + path.substr(8);
 }
 
 function trimTailingSlash(subject) {
@@ -156,7 +192,7 @@ if(match = NarwhalUriPath.match(/^jar:file:(\/\/|\\\\\\)(.*?\.jar)!(.*)$/)) {
     exports.registerJar(trimTailingSlash(system.env.nsINarwhal_NARWHAL_URI), match[2], match[3].replace(/\\/g, "/"));
     NarwhalUriPath = false;
 } else {
-    NarwhalUriPath = NarwhalUriPath.substr((isWindows)?8:7);
+//    NarwhalUriPath = NarwhalUriPath.substr((isWindows)?8:7);
     if(isWindows) {
         NarwhalUriPath = NarwhalUriPath.replace(/\//g, "\\");
     }
@@ -165,7 +201,7 @@ if(match = EngineUriPath.match(/^jar:file:(\/\/|\\\\\\)(.*?\.jar)!(.*)$/)) {
     exports.registerJar(trimTailingSlash(system.env.nsINarwhal_ENGINE_URI), match[2], match[3].replace(/\\/g, "/"));
     EngineUriPath = false;
 } else {
-    EngineUriPath = EngineUriPath.substr((isWindows)?8:7);
+//    EngineUriPath = EngineUriPath.substr((isWindows)?8:7);
     if(isWindows) {
         EngineUriPath = EngineUriPath.replace(/\//g, "\\");
     }

@@ -21,15 +21,15 @@ var APP_STARTUP = "app-startup";
 var PROFILE_READY = "profile-do-change";
 
 var EXTENSION_BOOTSTRAP_URI = "chrome://narwhal-xulrunner/content/bootstrap.js";
-var EXTENSION_ENGINE_URI = "resource://narwhal-xulrunner/";
+var EXTENSION_ENGINE_URI = "chrome://narwhal-xulrunner/content/";
 var EXTENSION_NARWHAL_URI = "chrome://narwhal-xulrunner/content/narwhal/";
 var EXTENSION_DEBUG = false;
 var EXTENSION_VERBOSE = false;
 
-function dump(msg)
-{
+//function dump(msg)
+//{
     //Components.utils.reportError(msg);
-}
+//}
 
 dump("nsINarwhall.js starting");
 
@@ -147,7 +147,6 @@ function readFile(file) {
         } catch(e) {
             dump("nsINarwhal.readFile channel read FAILS for "+file.url+" "+e);
         }
-
     }
 }
 

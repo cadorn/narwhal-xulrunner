@@ -1,9 +1,9 @@
 /* Copyright (c) 2006 Irakli Gozalishvili <rfobic@gmail.com>
    See the file LICENSE for licensing information. */
-function dump(msg)
-{
-    Components.utils.reportError(msg);
-}
+//function dump(msg)
+//{
+//    Components.utils.reportError(msg);
+//}
 /**
  * Bootstrap file for the XULRunner engine.
  */
@@ -51,8 +51,8 @@ function dump(msg)
 
     function fixPathUri(path) {
         path = path.replace(/\\/g, "/");
-        if(!/^resource:\/[^\/].*/.test(path)) return path;
-        return "resource://" + path.substr(10);
+        if(!/^chrome:\/[^\/].*/.test(path)) return path;
+        return "chrome://" + path.substr(8);
     }
 
     function read(path) {

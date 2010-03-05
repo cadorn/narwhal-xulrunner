@@ -53,9 +53,9 @@
             var loader = Loader({
                 // construct own loader paths to ensure predictable environment
                 "paths": [
-                    "resource://narwhal-xulrunner/lib",
-                    "resource://narwhal/engines/default/lib",
-                    "resource://narwhal/lib"
+                    "chrome://narwhal-xulrunner/content/lib",
+                    "chrome://narwhal-xulrunner/content/narwhal/engines/default/lib",
+                    "chrome://narwhal-xulrunner/content/narwhal/lib"
                 ]
             });
             var sandbox = Sandbox({
@@ -76,8 +76,8 @@
             // load packages from paths
             sandbox('packages').load([
                 programRootPath.valueOf(),          // application/extension packages
-                "resource://narwhal-xulrunner",
-                "resource://narwhal"
+                "chrome://narwhal-xulrunner/content/",
+                "chrome://narwhal-xulrunner/content/narwhal/"
             ]);
 
             return sandboxes[key] = {
