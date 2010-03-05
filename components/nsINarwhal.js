@@ -20,12 +20,18 @@ var JS_PATH = "JS_PATH";
 var APP_STARTUP = "app-startup";
 var PROFILE_READY = "profile-do-change";
 
-var EXTENSION_BOOTSTRAP_URI = "resource://narwhal-xulrunner/bootstrap.js";
+var EXTENSION_BOOTSTRAP_URI = "chrome://narwhal-xulrunner/content/bootstrap.js";
 var EXTENSION_ENGINE_URI = "resource://narwhal-xulrunner/";
-var EXTENSION_NARWHAL_URI = "resource://narwhal/";
+var EXTENSION_NARWHAL_URI = "chrome://narwhal-xulrunner/content/narwhal/";
 var EXTENSION_DEBUG = false;
 var EXTENSION_VERBOSE = false;
 
+function dump(msg)
+{
+    //Components.utils.reportError(msg);
+}
+
+dump("nsINarwhall.js starting");
 
 /**
  * Load profile-wide narwhal config from <ProfileDirectory>/narwhal.json.
@@ -38,7 +44,7 @@ function loadNarwhalConfig() {
     try {
         var prefFile = Cc["@mozilla.org/file/directory_service;1"].getService(Ci.nsIProperties).get("ProfD", Ci.nsIFile);
         prefFile.append("narwhal.json");
-/* Do not write config by default. Only use it if available.         
+/* Do not write config by default. Only use it if available.
         if(!prefFile.exists()) {
             writeFile(prefFile, JSON.stringify({
                 "BOOTSTRAP_URI": EXTENSION_BOOTSTRAP_URI,
@@ -48,7 +54,7 @@ function loadNarwhalConfig() {
                 "VERBOSE": EXTENSION_VERBOSE
             }));
         }
-*/        
+*/
         var config = JSON.parse(readFile(prefFile));
         if(config.hasOwnProperty("BOOTSTRAP_URI"))
             EXTENSION_BOOTSTRAP_URI = config.BOOTSTRAP_URI;
@@ -61,8 +67,8 @@ function loadNarwhalConfig() {
         if(config.hasOwnProperty("VERBOSE"))
             EXTENSION_VERBOSE = config.VERBOSE;
     } catch(e) {
-        if (e.message) dump(e.message + "\n");
-        if (e.stack) dump(e.stack + "\n");
+        if (e.message) dump("loadNarwhalConfig FAILS: "+e.message + "\n");
+        if (e.stack) dump("loadNarwhalConfig FAILS: "+e.stack + "\n");
     }
 }
 
@@ -73,7 +79,7 @@ function loadNarwhalConfig() {
  */
 function writeFile(file, data) {
     var foStream = Cc["@mozilla.org/network/file-output-stream;1"].createInstance(Ci.nsIFileOutputStream);
-    foStream.init(file, 0x02 | 0x08 | 0x20, 0666, 0); 
+    foStream.init(file, 0x02 | 0x08 | 0x20, 0666, 0);
     var converter = Cc["@mozilla.org/intl/converter-output-stream;1"].createInstance(Ci.nsIConverterOutputStream);
     converter.init(foStream, "UTF-8", 0, 0);
     converter.writeString(data);
@@ -115,20 +121,33 @@ function readFile(file) {
                 result.push(line.value);
             } while (haveMore)
         } catch(e) {
-            if (e.message) dump(e.message + "\n");
-            if (e.stack) dump(e.stack + "\n");
+            dump("nsINarwhal.readFile FAILS for file.path: "+file.path + " "+e);
+            if (e.message) dump("nsINarwhal.readFile FAILS: "+e.message + "\n");
         } finally {
             fis.close();
         }
-        return result.join('\n');        
+        return result.join('\n');
     } else {
-        var channel = IOService.newChannel(file.url, null, null);
-        var input = channel.open();
-        ScriptableStream.init(input);
-        var str = ScriptableStream.read(input.available());
-        ScriptableStream.close();
-        input.close();
-        return str;
+        try	{
+            dump("nsINarwhal.readFile new channel for "+file.url+"\n");
+            var channel = IOService.newChannel(file.url, null, null);
+            if (channel) {
+                dump("nsINarwhal.readFile got channel for "+file.url+"\n");
+                var input = channel.open();
+                dump("nsINarwhal.readFile open channel for "+file.url+"\n");
+                ScriptableStream.init(input);
+                var str = ScriptableStream.read(input.available());
+                ScriptableStream.close();
+                input.close();
+                dump("nsINarwhal.readFile close channel for "+file.url);
+                return str;
+            } else {
+                dump("nsINarwhal.readFile no channel for "+file.url+"\n");
+            }
+        } catch(e) {
+            dump("nsINarwhal.readFile channel read FAILS for "+file.url+" "+e);
+        }
+
     }
 }
 
@@ -189,7 +208,7 @@ AppStartupBoot.prototype = {
     },
     boot: function() {
         try {
-            loadNarwhalConfig();
+           // loadNarwhalConfig();
             bootstrapNarwhal({
                 "url": EXTENSION_BOOTSTRAP_URI,
                 "exists": function() {
@@ -215,7 +234,7 @@ function bootstrapNarwhal(bootstrap) {
             Env.set("nsINarwhal_DEBUG", (EXTENSION_DEBUG)?"true":"false");
             Env.set("nsINarwhal_VERBOSE", (EXTENSION_VERBOSE)?"true":"false");
             var sandbox = Cu.Sandbox(Cc["@mozilla.org/systemprincipal;1"].createInstance(Ci.nsIPrincipal));
-            Cu.evalInSandbox(readFile(bootstrap), sandbox, "1.8", bootstrap.path, 0);
+            Cu.evalInSandbox(readFile(bootstrap), sandbox, "1.8", (bootstrap.path?bootstrap.path:bootstrap.url), 0);
             Narwhal.prototype.__proto__ = sandbox;
         } catch(e) {
             Cu.reportError(e);
