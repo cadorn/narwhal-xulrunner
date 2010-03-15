@@ -55,10 +55,5 @@
     "directories": {
         "lib": "lib",
         "bin": "bin"
-    },
-    "pinf": {
-        "builder": {
-            "module": "builders/extension"
-        }
     }
 }

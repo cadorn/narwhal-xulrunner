@@ -108,22 +108,24 @@
     var narwhal = Cu.evalInSandbox(read(path), global, "1.8", path, 0);
     dump("narwhal evaled from "+path);
     narwhal({
-        global: global,
-        evalGlobal: evalGlobal, //evaluateInGlobal,
-        evaluate: evaluateInSandbox,
-        engine: 'xulrunner',
-        engines: ['xulrunner', 'default'],
-        os: Cc["@mozilla.org/xre/app-info;1"].getService(Ci.nsIXULRuntime).OS,
-        debug: debug,
-        verbose: verbose,
-        print: print,
-        fs: {
+        system: {
+            global: global,
+            evalGlobal: evalGlobal, //evaluateInGlobal,
+            evaluate: evaluateInSandbox,
+            engine: 'xulrunner',
+            engines: ['xulrunner', 'default'],
+            os: Cc["@mozilla.org/xre/app-info;1"].getService(Ci.nsIXULRuntime).OS,
+            debug: debug,
+            verbose: verbose,
+            print: print,
+            prefix: NARWHAL_HOME,
+            packages: [NARWHAL_ENGINE_HOME, NARWHAL_HOME],
+            enginePrefix: NARWHAL_ENGINE_HOME
+        },
+        file: {
             read: read,
             isFile: isFile
         },
-        prefix: NARWHAL_HOME,
-        prefixes: [NARWHAL_ENGINE_HOME, NARWHAL_HOME],
-        enginePrefix: NARWHAL_ENGINE_HOME
     });
     dump("narwhal init from "+path);
 })(this, function () {
