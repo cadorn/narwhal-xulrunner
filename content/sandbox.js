@@ -23,7 +23,11 @@
     var Loader = LOADER.Loader;
     var JAR_LOADER = narwhal.require("jar-loader");
 
-    var sandboxes = {};
+dump("\nSANDBOX LOADED\n");
+
+    var sandboxes = {},
+        globalEventListeners = [],
+        allSandboxesReady = false;
     scope.get = function(program, module) {
         if(!program || !program.type || !program.id) {
             throw new Error("Invalid program argument!");
@@ -84,24 +88,63 @@
                 "require": function(id, pkg) {
                     return sandbox(id, null, pkg);
                 },
-                "system": system
+                "system": system,
+                "paths": sandbox.paths,
+                "isReady": false,
+                "ready": function() {
+                    this.isReady = true;
+                    checkIfAllReady();
+                },
+                "onGlobalEvent": function(callback) {
+                    globalEventListeners.push(callback);
+                },
+                "dispatchGlobalEvent": function(event) {
+                    if(!allSandboxesReady) {
+                        throw new Error("Cannot dispatch global event before all sandboxes are ready!");
+                    }
+                    for( var i=0, s=globalEventListeners.length ; i<s ; i++ ) {
+                        globalEventListeners[i](event);
+                    }
+                }
             }
-                
+
         } catch(e) {
             narwhal.system.log.error(e);
         }
         return false;
     };
+    
+    function checkIfAllReady() {
+        var allReady = true;
+        for( var key in sandboxes ) {
+            if(!sandboxes[key].isReady) {
+                allReady = false;
+                break;
+            }
+        }
+        if(allReady) {
+            allSandboxesReady = true;
+            for( var key in sandboxes ) {
+                if(sandboxes[key].onAllReady) {
+                    sandboxes[key].onAllReady();
+                }
+            }
+        }
+    }
 
     function getPath(program, path) {
         if(program.type=="extension") {
             var em = Cc["@mozilla.org/extensions/manager;1"].getService(Ci.nsIExtensionManager);
             return em.getInstallLocation(program.id).getItemFile(program.id, path).path;
-        } else {
+        } else
+        if(program.type=="application") {
             var ResourceHandler = Cc['@mozilla.org/network/protocol;1?name=resource'].getService(Ci.nsIResProtocolHandler);
             var IOService = Cc['@mozilla.org/network/io-service;1'].getService(Ci.nsIIOService)
             var FileService = IOService.getProtocolHandler("file").QueryInterface(Ci.nsIFileProtocolHandler);
             return FileService.getFileFromURLSpec(ResourceHandler.resolveURI(IOService.newURI("resource:"+path, null, null))).path;
+        } else
+        if(program.type=="package") {
+            return path;
         }
     }
 })(this);
