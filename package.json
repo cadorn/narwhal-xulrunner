@@ -1,6 +1,7 @@
 {
     "name": "narwhal-xulrunner",
     "label": "Narwhal for XULRunner",
+    "homepage": "http://github.com/Gozala/narwhal-xulrunner",
     "description": "XULRunner engine support for Narwhal.",
     "engine": "xulrunner",
     "version": "0.1.0",
