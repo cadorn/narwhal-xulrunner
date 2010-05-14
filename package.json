@@ -1,6 +1,7 @@
 {
     "name": "narwhal-xulrunner",
-    "description": "XULRunner engine support for Narwhal",
+    "label": "Narwhal for XULRunner",
+    "description": "XULRunner engine support for Narwhal.",
     "engine": "xulrunner",
     "version": "0.1.0",
     "keywords": ["narwhal", "engine", "xulrunner", "mozilla", "extension"],
@@ -37,7 +38,7 @@
             "web": "http://zaa.ch/"
         }
     ],
-    "bugs": { "web": "http://github.com/Gozala/narwhal-xulrunner/issues/" },
+    "bugs": "http://github.com/Gozala/narwhal-xulrunner/issues/",
     "licenses": [
         { "type": "MPL" },
         { "type": "GPL 2.0" },
