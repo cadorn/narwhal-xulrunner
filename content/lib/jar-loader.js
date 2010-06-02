@@ -36,8 +36,9 @@ const nsINarwhal_ENGINE_URI = ENV.get("nsINarwhal_ENGINE_URI");
 
 
 var NarwhalUriPath = ChromeRegistry.convertChromeURL(IOService.newURI(nsINarwhal_NARWHAL_URI, null, null)).path;
+NarwhalUriPath = NarwhalUriPath.replace("%20", " ");
 var EngineUriPath = ChromeRegistry.convertChromeURL(IOService.newURI(nsINarwhal_ENGINE_URI, null, null)).path;
-EngineUriPath = EngineUriPath.substr(0, EngineUriPath.length-21);
+EngineUriPath = EngineUriPath.substr(0, EngineUriPath.length-21).replace("%20", " ");
 
 const isWindows = (/\bwindows\b/i.test(system.os) || /\bwinnt\b/i.test(system.os));
 
@@ -123,21 +124,21 @@ exports.registerJar = function(matchPath, archiveFile, basePath) {
 exports.mapPath = function(method, path) {
     path = fixPathUri(path);
 
-dump("mapPath:path: "+path);
+//dump("mapPath:path: "+path);
     
     // map chrome:// URIs to filesystem paths if resources are not jarred
     if(EngineUriPath && path.substr(0,nsINarwhal_ENGINE_URI.length)==nsINarwhal_ENGINE_URI) {
         if(isWindows) {
             path = path.replace(/\//g, "\\");
         }
-dump("mapPath:EngineUriPath: "+EngineUriPath + "|<->|" + path.substr(nsINarwhal_ENGINE_URI.length));
+//dump("mapPath:EngineUriPath: "+EngineUriPath + "|<->|" + path.substr(nsINarwhal_ENGINE_URI.length));
         return {"path": EngineUriPath + path.substr(nsINarwhal_ENGINE_URI.length)};
     }
     if(NarwhalUriPath && path.substr(0,nsINarwhal_NARWHAL_URI.length)==nsINarwhal_NARWHAL_URI) {
         if(isWindows) {
             path = path.replace(/\//g, "\\");
         }
-dump("mapPath:NarwhalUriPath: "+NarwhalUriPath + "|<->|" + path.substr(nsINarwhal_NARWHAL_URI.length));
+//dump("mapPath:NarwhalUriPath: "+NarwhalUriPath + "|<->|" + path.substr(nsINarwhal_NARWHAL_URI.length));
         return {"path": NarwhalUriPath + path.substr(nsINarwhal_NARWHAL_URI.length)};
     }
 
