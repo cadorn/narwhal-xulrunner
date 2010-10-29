@@ -104,9 +104,7 @@
         return Cu.evalInSandbox(source, global, "1.8", path, lineNo);
     }
     var path = joinPath(NARWHAL_HOME, 'narwhal.js');
-    dump("narwhal bootstrap from "+path);
     var narwhal = Cu.evalInSandbox(read(path), global, "1.8", path, 0);
-    dump("narwhal evaled from "+path);
     narwhal({
         system: {
             global: global,
@@ -127,7 +125,6 @@
             isFile: isFile
         },
     });
-    dump("narwhal init from "+path);
 })(this, function () {
     // no lexical arguments so they do not mask
     // variables by the same name in global scope.

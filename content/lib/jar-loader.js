@@ -18,10 +18,10 @@
  *   
  */
 
-function dump(msg)
-{
+//function dump(msg)
+//{
 //    Components.utils.reportError(msg);
-}
+//}
 
 var IO = require("./io").IO;
 var UTIL = require("util");
@@ -33,14 +33,41 @@ const ChromeRegistry = Cc['@mozilla.org/chrome/chrome-registry;1'].getService(Ci
 
 const nsINarwhal_NARWHAL_URI = ENV.get("nsINarwhal_NARWHAL_URI");
 const nsINarwhal_ENGINE_URI = ENV.get("nsINarwhal_ENGINE_URI");
+const isWindows = (/\bwindows\b/i.test(system.os) || /\bwinnt\b/i.test(system.os));
 
 
 var NarwhalUriPath = ChromeRegistry.convertChromeURL(IOService.newURI(nsINarwhal_NARWHAL_URI, null, null)).path;
-NarwhalUriPath = NarwhalUriPath.replace("%20", " ");
 var EngineUriPath = ChromeRegistry.convertChromeURL(IOService.newURI(nsINarwhal_ENGINE_URI, null, null)).path;
-EngineUriPath = EngineUriPath.substr(0, EngineUriPath.length-21).replace("%20", " ");
+EngineUriPath = EngineUriPath.substr(0, EngineUriPath.length-21);
 
-const isWindows = (/\bwindows\b/i.test(system.os) || /\bwinnt\b/i.test(system.os));
+NarwhalUriPath = NarwhalUriPath.replace(/%20/g, " ");
+EngineUriPath = EngineUriPath.replace(/%20/g, " ");
+
+//if(isWindows) {
+//    NarwhalUriPath = NarwhalUriPath.replace(/\//g, "\\");
+//    EngineUriPath = EngineUriPath.replace(/\//g, "\\");
+//}
+
+var match;
+
+if(match = NarwhalUriPath.match(/^jar:file:(\/\/|\\\\\\)(.*?\.jar)!(.*)$/)) {
+    exports.registerJar(trimTailingSlash(nsINarwhal_NARWHAL_URI), match[2], match[3].replace(/\\/g, "/"));
+    NarwhalUriPath = false;
+} else {
+    if(isWindows) {
+        NarwhalUriPath = NarwhalUriPath.substring(1).replace(/\//g, "\\");
+    }
+}
+if(match = EngineUriPath.match(/^jar:file:(\/\/|\\\\\\)(.*?\.jar)!(.*)$/)) {
+    exports.registerJar(trimTailingSlash(nsINarwhal_ENGINE_URI), match[2], match[3].replace(/\\/g, "/"));
+    EngineUriPath = false;
+} else {
+    if(isWindows) {
+        EngineUriPath = EngineUriPath.substring(1).replace(/\//g, "\\");
+    }
+}
+
+
 
 var jars = {};
 
@@ -178,31 +205,3 @@ function trimTailingSlash(subject) {
     }
     return subject.substr(0, subject.length-1);
 }
-
-
-var match;
-
-if(isWindows) {
-    NarwhalUriPath = NarwhalUriPath.replace(/\//g, "\\").replace(/%20/g, " ");
-    EngineUriPath = EngineUriPath.replace(/\//g, "\\").replace(/%20/g, " ");
-}
-
-if(match = NarwhalUriPath.match(/^jar:file:(\/\/|\\\\\\)(.*?\.jar)!(.*)$/)) {
-    exports.registerJar(trimTailingSlash(nsINarwhal_NARWHAL_URI), match[2], match[3].replace(/\\/g, "/"));
-    NarwhalUriPath = false;
-} else {
-//    NarwhalUriPath = NarwhalUriPath.substr((isWindows)?8:7);
-    if(isWindows) {
-        NarwhalUriPath = NarwhalUriPath.replace(/\//g, "\\");
-    }
-}
-if(match = EngineUriPath.match(/^jar:file:(\/\/|\\\\\\)(.*?\.jar)!(.*)$/)) {
-    exports.registerJar(trimTailingSlash(nsINarwhal_ENGINE_URI), match[2], match[3].replace(/\\/g, "/"));
-    EngineUriPath = false;
-} else {
-//    EngineUriPath = EngineUriPath.substr((isWindows)?8:7);
-    if(isWindows) {
-        EngineUriPath = EngineUriPath.replace(/\//g, "\\");
-    }
-}
-

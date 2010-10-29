@@ -10,7 +10,7 @@
 (function(scope) {
     var Cc = Components.classes;
     var Ci = Components.interfaces;
-    scope.EXPORTED_SYMBOLS = ["get"];
+    scope.EXPORTED_SYMBOLS = ["get", "create"];
     var narwhal = {};
     Components.utils.import("resource://narwhal-xulrunner/embed.js", narwhal);
 
@@ -23,22 +23,42 @@
     var Loader = LOADER.Loader;
     var JAR_LOADER = narwhal.require("jar-loader");
 
-dump("\nSANDBOX LOADED\n");
-
     var sandboxes = {},
         globalEventListeners = [],
         allSandboxesReady = false;
-    scope.get = function(program, module) {
-        if(!program || !program.type || !program.id) {
+
+    scope.get = function(options) {
+        if(!options || !options.type || !options.id) {
             throw new Error("Invalid program argument!");
         }
-        var key = program.type + ":" + program.id;
-        if(sandboxes[key]) {
-            return sandboxes[key];
+        options.internalID = options.internalID || options.id;
+
+        if(sandboxes[options.id]) {
+            return sandboxes[options.id];
         }
+
+        return scope.create(options);
+    };
+
+    /**
+     * options = {
+     *   "type": "extension",
+     *   "id": "<SandboxID>",
+     *   "internalID": "<ExtensionID>",
+     *   "modules": {existing modules},
+     *   "debug": true
+     * }
+     */
+    scope.create = function(options) {
+        if(!options || !options.type || !options.id) {
+            throw new Error("Invalid program argument!");
+        }
+        options.internalID = options.internalID || options.id;
+        options.modules = options.modules || {};
+        options.debug = options.debug || false;
         try {
             // start with the program root path and locate all resources from there
-            var programRootPath = FILE.Path(getPath(program, "/"));
+            var programRootPath = FILE.Path(getPath(options, "/"));
 
             if(programRootPath.join("using.jar").exists()) {
                 JAR_LOADER.registerJar(
@@ -62,33 +82,48 @@ dump("\nSANDBOX LOADED\n");
                     "chrome://narwhal-xulrunner/content/narwhal/lib"
                 ]
             });
+            options.modules["system"] = system;
+            if(!options.modules["jar-loader"]) {
+                options.modules["jar-loader"] = JAR_LOADER        // prevents module from being re-loaded in the sandbox
+            }
             var sandbox = Sandbox({
                 "loader": loader,
                 "system": system,
-                "modules": {
-                    "system": system,
-                    "jar-loader": JAR_LOADER        // prevents module from being re-loaded in the sandbox
-                },
-                "debug": false
+                "modules": options.modules,
+                "debug": options.debug
             });
 
             system = sandbox.force("system");
             system.env["SEA"] = programRootPath.valueOf();
             system.sea = programRootPath.valueOf();
             sandbox("global");
+            
+            if(options.modules["packages"]) {
+                // add existing package paths to the loader
+                sandbox.paths.splice.apply(
+                    sandbox.paths,
+                    [0, sandbox.paths.length].concat(sandbox('packages').analysis.libPaths)
+                );
+                sandbox.loader.usingCatalog = sandbox('packages').usingCatalog;
+                sandbox.loader.uidCatalog = sandbox('packages').uidCatalog;
+            } else {
+                // load packages from paths
+                sandbox('packages').load([
+                    programRootPath.valueOf(),          // application/extension packages
+                    "chrome://narwhal-xulrunner/content/",
+                    "chrome://narwhal-xulrunner/content/narwhal/"
+                ]);
+            }
 
-            // load packages from paths
-            sandbox('packages').load([
-                programRootPath.valueOf(),          // application/extension packages
-                "chrome://narwhal-xulrunner/content/",
-                "chrome://narwhal-xulrunner/content/narwhal/"
-            ]);
-
-            return sandboxes[key] = {
+            return sandboxes[options.id] = {
+                "id": options.id,
+                "internalID": options.internalID,
                 "require": function(id, pkg) {
                     return sandbox(id, null, pkg);
                 },
+                "sea": programRootPath.valueOf(),
                 "system": system,
+                "modules": options.modules,
                 "paths": sandbox.paths,
                 "isReady": false,
                 "ready": function() {
@@ -103,7 +138,11 @@ dump("\nSANDBOX LOADED\n");
                         throw new Error("Cannot dispatch global event before all sandboxes are ready!");
                     }
                     for( var i=0, s=globalEventListeners.length ; i<s ; i++ ) {
-                        globalEventListeners[i](event);
+                        try {
+                            globalEventListeners[i](event);
+                        } catch(e) {
+                            system.log.error(e);
+                        }
                     }
                 }
             }
@@ -132,18 +171,18 @@ dump("\nSANDBOX LOADED\n");
         }
     }
 
-    function getPath(program, path) {
-        if(program.type=="extension") {
+    function getPath(options, path) {
+        if(options.type=="extension") {
             var em = Cc["@mozilla.org/extensions/manager;1"].getService(Ci.nsIExtensionManager);
-            return em.getInstallLocation(program.id).getItemFile(program.id, path).path;
+            return em.getInstallLocation(options.internalID).getItemFile(options.internalID, path).path;
         } else
-        if(program.type=="application") {
+        if(options.type=="application") {
             var ResourceHandler = Cc['@mozilla.org/network/protocol;1?name=resource'].getService(Ci.nsIResProtocolHandler);
             var IOService = Cc['@mozilla.org/network/io-service;1'].getService(Ci.nsIIOService)
             var FileService = IOService.getProtocolHandler("file").QueryInterface(Ci.nsIFileProtocolHandler);
             return FileService.getFileFromURLSpec(ResourceHandler.resolveURI(IOService.newURI("resource:"+path, null, null))).path;
         } else
-        if(program.type=="package") {
+        if(options.type=="package") {
             return path;
         }
     }

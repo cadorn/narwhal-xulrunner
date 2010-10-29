@@ -8,7 +8,7 @@
         <em:name>Narwhal for XULRunner</em:name>
         <em:version>0.1</em:version>
 
-        <em:description>Narwhal for XULRunner</em:description>
+        <em:description>XULRunner engine support for Narwhal.</em:description>
 
         <em:creator>Narwhal XULRunner Team</em:creator>
         <em:homepageURL>http://github.com/Gozala/narwhal-xulrunner</em:homepageURL>
@@ -16,13 +16,15 @@
         <em:developer>Irakli Gozalishvili</em:developer>
         <em:developer>Christoph Dorn</em:developer>
 
+        <em:iconURL>chrome://narwhal-xulrunner/content/narwhal_32.png</em:iconURL>
+
         <em:type>2</em:type> <!-- type=extension --> 
         <em:targetApplication>
             <Description>
                 <!-- Mozilla toolkit's uuid -->
                 <em:id>toolkit@mozilla.org</em:id>
                 <em:minVersion>1.9*</em:minVersion>
-                <em:maxVersion>1.9.*</em:maxVersion>
+                <em:maxVersion>2.*</em:maxVersion>
             </Description>
         </em:targetApplication>
     </Description>

@@ -39,7 +39,7 @@
             "web": "http://zaa.ch/"
         }
     ],
-    "bugs": "http://github.com/Gozala/narwhal-xulrunner/issues/",
+    "bugs": "http://github.com/Gozala/narwhal-xulrunner/issues",
     "licenses": [
         { "type": "MPL" },
         { "type": "GPL 2.0" },

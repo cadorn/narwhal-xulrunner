@@ -31,8 +31,6 @@ var EXTENSION_VERBOSE = false;
     //Components.utils.reportError(msg);
 //}
 
-dump("nsINarwhall.js starting");
-
 /**
  * Load profile-wide narwhal config from <ProfileDirectory>/narwhal.json.
  * The URIs specified in this config are used during the bootstrapping process.
@@ -129,17 +127,13 @@ function readFile(file) {
         return result.join('\n');
     } else {
         try	{
-            dump("nsINarwhal.readFile new channel for "+file.url+"\n");
             var channel = IOService.newChannel(file.url, null, null);
             if (channel) {
-                dump("nsINarwhal.readFile got channel for "+file.url+"\n");
                 var input = channel.open();
-                dump("nsINarwhal.readFile open channel for "+file.url+"\n");
                 ScriptableStream.init(input);
                 var str = ScriptableStream.read(input.available());
                 ScriptableStream.close();
                 input.close();
-                dump("nsINarwhal.readFile close channel for "+file.url);
                 return str;
             } else {
                 dump("nsINarwhal.readFile no channel for "+file.url+"\n");
