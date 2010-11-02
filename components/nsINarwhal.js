@@ -42,17 +42,9 @@ function loadNarwhalConfig() {
     try {
         var prefFile = Cc["@mozilla.org/file/directory_service;1"].getService(Ci.nsIProperties).get("ProfD", Ci.nsIFile);
         prefFile.append("narwhal.json");
-/* Do not write config by default. Only use it if available.
         if(!prefFile.exists()) {
-            writeFile(prefFile, JSON.stringify({
-                "BOOTSTRAP_URI": EXTENSION_BOOTSTRAP_URI,
-                "ENGINE_URI": EXTENSION_ENGINE_URI,
-                "NARWHAL_URI": EXTENSION_NARWHAL_URI,
-                "DEBUG": EXTENSION_DEBUG,
-                "VERBOSE": EXTENSION_VERBOSE
-            }));
+            return;
         }
-*/
         var config = JSON.parse(readFile(prefFile));
         if(config.hasOwnProperty("BOOTSTRAP_URI"))
             EXTENSION_BOOTSTRAP_URI = config.BOOTSTRAP_URI;
@@ -65,8 +57,8 @@ function loadNarwhalConfig() {
         if(config.hasOwnProperty("VERBOSE"))
             EXTENSION_VERBOSE = config.VERBOSE;
     } catch(e) {
-        if (e.message) dump("loadNarwhalConfig FAILS: "+e.message + "\n");
-        if (e.stack) dump("loadNarwhalConfig FAILS: "+e.stack + "\n");
+        if (e.message) dump("[narwhal][nsINarwhal::loadNarwhalConfig] Error: "+e.message + "\n");
+        if (e.stack) dump("[narwhal][nsINarwhal::loadNarwhalConfig] Error: "+e.stack + "\n");
     }
 }
 
@@ -201,7 +193,7 @@ AppStartupBoot.prototype = {
     },
     boot: function() {
         try {
-           // loadNarwhalConfig();
+            loadNarwhalConfig();
             bootstrapNarwhal({
                 "url": EXTENSION_BOOTSTRAP_URI,
                 "exists": function() {
@@ -231,8 +223,8 @@ function bootstrapNarwhal(bootstrap) {
             Narwhal.prototype.__proto__ = sandbox;
         } catch(e) {
             Cu.reportError(e);
-            if (e.message) dump(e.message + "\n");
-            if (e.stack) dump(e.stack + "\n");
+            if (e.message) dump("[narwhal][nsINarwhal::bootstrapNarwhal] ERROR: " + e.message + "\n");
+            if (e.stack) dump("[narwhal][nsINarwhal::bootstrapNarwhal] ERROR: " + e.stack + "\n");
         }
 }
 /**
@@ -260,6 +252,7 @@ Narwhal.prototype = {
     }],
     _xpcom_factory: {
         createInstance: function(outer, iid) {
+            dump("[narwhal][nsINarwhal::Narwhal] createInstance\n");
             if (outer != null) throw Components.results.NS_ERROR_NO_AGGREGATION;
             if (!narwhal) narwhal = new Narwhal();
             narwhal.QueryInterface(iid);
@@ -270,10 +263,22 @@ Narwhal.prototype = {
     implementationLanguage: Ci.nsIProgrammingLanguage.JAVASCRIPT,
     getHelperForLanguage: function(number) null,
     getInterfaces: function(number) {
+        dump("[narwhal][nsINarwhal::Narwhal] getInterfaces\n");
         number.value = Narwhal.Interfaces.length;
         return Narwhal.Interfaces;
     }
 };
 
 var components = [AppStartupBoot, Narwhal];
-function NSGetModule(compMgr, fileSpec) XPCOMUtils.generateModule(components);
+
+/**
+* XPCOMUtils.generateNSGetFactory was introduced in Mozilla 2 (Firefox 4).
+* XPCOMUtils.generateNSGetModule is for Mozilla 1.9.2 (Firefox 3.6).
+*/
+if (XPCOMUtils.generateNSGetFactory) {
+    dump("[narwhal][nsINarwhal] XPCOMUtils.generateNSGetFactory\n");
+
+    var NSGetFactory = XPCOMUtils.generateNSGetFactory(components);
+} else {
+    function NSGetModule(compMgr, fileSpec) XPCOMUtils.generateModule(components);
+}
