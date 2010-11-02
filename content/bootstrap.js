@@ -94,13 +94,13 @@
         } else {
             scope = global;
         }
-        var source = "(function(require,exports,module,system,print){try{" + code +"/**/\n}catch(e){(system.log)?system.log.error(e):dump('ERROR[evaluateInSandbox]: '+e);}})";
+        var source = "(function(require,exports,module,system,print){try{" + code +"/**/\n}catch(e){(system.log)?system.log.error(e):dump('[narwhal][bootstrap.js::evaluateInSandbox] ERROR("+path+"): '+e.message+' | '+e.stack+' |END');}})";
         return Cu.evalInSandbox(source, scope, "1.8", path, lineNo);
     }
     function evaluateInGlobal(code, path, lineNo) {
         lineNo = lineNo || 0;
         path = path || "anonymus";
-        var source = "(function(require,exports,module,system,print){try{" + code +"/**/\n}catch(e){(system.log)?system.log.error(e):dump('ERROR[evaluateInGlobal]: '+e);}})";
+        var source = "(function(require,exports,module,system,print){try{" + code +"/**/\n}catch(e){(system.log)?system.log.error(e):dump('[narwhal][bootstrap.js::evaluateInGlobal] ERROR("+path+"): '+e+' |END');}})";
         return Cu.evalInSandbox(source, global, "1.8", path, lineNo);
     }
     var path = joinPath(NARWHAL_HOME, 'narwhal.js');

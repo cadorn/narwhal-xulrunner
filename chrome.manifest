@@ -7,3 +7,16 @@ content narwhal content/narwhal/ contentaccessible=yes
 
 # To support Components.utils.import()
 resource narwhal-xulrunner content/
+
+
+# FF >= 4
+
+interfaces components/nsINarwhal.xpt
+
+component {8f0feebb-4fdc-9946-bd17-445a2e7d6557} components/nsINarwhal.js
+contract @narwhaljs.org/xulrunner/boot/start-up;1 {8f0feebb-4fdc-9946-bd17-445a2e7d6557}
+category profile-after-change NarwhalAppStartupBoot @narwhaljs.org/xulrunner/boot/start-up;1
+
+component {d438150e-51a2-4f45-9de9-619f5ab01a90} components/nsINarwhal.js
+contract @narwhaljs.org/xulrunner/global;1 {d438150e-51a2-4f45-9de9-619f5ab01a90}
+category JavaScript-global-privileged-property global @narwhaljs.org/xulrunner/global;1

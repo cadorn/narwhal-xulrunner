@@ -17,8 +17,7 @@ var NARWHAL_HOME = "NARWHAL_HOME";
 var ENGINE_HOME = "NARWHAL_ENGINE_HOME";
 var PATH = "NARWHAL_PATH";
 var JS_PATH = "JS_PATH";
-var APP_STARTUP = "app-startup";
-var PROFILE_READY = "profile-do-change";
+var PROFILE_READY = "profile-after-change";
 
 var EXTENSION_BOOTSTRAP_URI = "chrome://narwhal-xulrunner/content/bootstrap.js";
 var EXTENSION_ENGINE_URI = "chrome://narwhal-xulrunner/content/";
@@ -42,17 +41,9 @@ function loadNarwhalConfig() {
     try {
         var prefFile = Cc["@mozilla.org/file/directory_service;1"].getService(Ci.nsIProperties).get("ProfD", Ci.nsIFile);
         prefFile.append("narwhal.json");
-/* Do not write config by default. Only use it if available.
         if(!prefFile.exists()) {
-            writeFile(prefFile, JSON.stringify({
-                "BOOTSTRAP_URI": EXTENSION_BOOTSTRAP_URI,
-                "ENGINE_URI": EXTENSION_ENGINE_URI,
-                "NARWHAL_URI": EXTENSION_NARWHAL_URI,
-                "DEBUG": EXTENSION_DEBUG,
-                "VERBOSE": EXTENSION_VERBOSE
-            }));
+            return;
         }
-*/
         var config = JSON.parse(readFile(prefFile));
         if(config.hasOwnProperty("BOOTSTRAP_URI"))
             EXTENSION_BOOTSTRAP_URI = config.BOOTSTRAP_URI;
@@ -65,8 +56,8 @@ function loadNarwhalConfig() {
         if(config.hasOwnProperty("VERBOSE"))
             EXTENSION_VERBOSE = config.VERBOSE;
     } catch(e) {
-        if (e.message) dump("loadNarwhalConfig FAILS: "+e.message + "\n");
-        if (e.stack) dump("loadNarwhalConfig FAILS: "+e.stack + "\n");
+        if (e.message) dump("[narwhal][nsINarwhal::loadNarwhalConfig] Error: "+e.message + "\n");
+        if (e.stack) dump("[narwhal][nsINarwhal::loadNarwhalConfig] Error: "+e.stack + "\n");
     }
 }
 
@@ -156,6 +147,7 @@ function getResourceFile(uri) FileService.getFileFromURLSpec(ResourceHandler.res
  * ENV variable NARWHAL_HOME and if" its defined looks for xulrunner engine
  * and uses it"s bootstrap.js to load.
  */
+/*
 function CommandLineBoot() {}
 CommandLineBoot.prototype = {
     classDescription: "Narwhal boot from command line",
@@ -177,7 +169,7 @@ CommandLineBoot.prototype = {
     },
     helpInfo: "-narwhal [path]             Bootstrap narwhal\nwill boot narwhal from the bootstar path. If not specified will look for ENV variable NARWHAL_HOME"
 }
-
+*/
 /**
  * XPCOM observes application startup. If there is narwhal extension installed
  * it will use as a path to the bootstarp.js to load, Otherwise looks for.
@@ -188,30 +180,26 @@ AppStartupBoot.prototype = {
     classID: Components.ID("{8f0feebb-4fdc-9946-bd17-445a2e7d6557}"),
     contractID: "@narwhaljs.org/xulrunner/boot/start-up;1",
     QueryInterface: XPCOMUtils.generateQI([Ci.nsISupports, Ci.nsIObserver]),
-    _xpcom_categories: [{ category: APP_STARTUP, service: true }],
+    _xpcom_categories: [{ category: PROFILE_READY, service: true }],
     observe: function(subject, topic, data) {
-        if (topic == APP_STARTUP) this.register();
-        else if (topic == PROFILE_READY) this.boot();
-    },
-    register: function() {
-        ObserverService.addObserver(this, PROFILE_READY, false);
-    },
-    unregister: function() {
-        ObserverService.removeObserver(this, PROFILE_READY);
+        dump("[narwhal][nsINarwhal::AppStartupBoot] observe: "+topic+"\n");
+        if (topic == PROFILE_READY) {
+            this.boot();
+        }
     },
     boot: function() {
-        try {
-           // loadNarwhalConfig();
-            bootstrapNarwhal({
-                "url": EXTENSION_BOOTSTRAP_URI,
-                "exists": function() {
-                    // TODO: Check with protocol handler to ensure URL does in fact exist
-                    return true;
-                }
-            });
-        } finally {
-            this.unregister();
-        }
+        dump("[narwhal][nsINarwhal::AppStartupBoot] bootstrapNarwhal start\n");
+
+        loadNarwhalConfig();
+        bootstrapNarwhal({
+            "url": EXTENSION_BOOTSTRAP_URI,
+            "exists": function() {
+                // TODO: Check with protocol handler to ensure URL does in fact exist
+                return true;
+            }
+        });
+        
+        dump("[narwhal][nsINarwhal::AppStartupBoot] bootstrapNarwhal end\n");
     }
 };
 /**
@@ -231,8 +219,8 @@ function bootstrapNarwhal(bootstrap) {
             Narwhal.prototype.__proto__ = sandbox;
         } catch(e) {
             Cu.reportError(e);
-            if (e.message) dump(e.message + "\n");
-            if (e.stack) dump(e.stack + "\n");
+            if (e.message) dump("[narwhal][nsINarwhal::bootstrapNarwhal] ERROR: " + e.message + "\n");
+            if (e.stack) dump("[narwhal][nsINarwhal::bootstrapNarwhal] ERROR: " + e.stack + "\n");
         }
 }
 /**
@@ -255,11 +243,12 @@ Narwhal.prototype = {
     QueryInterface: XPCOMUtils.generateQI(Narwhal.Interfaces),
     _xpcom_categories: [{
         // http://mxr.mozilla.org/seamonkey/source/dom/public/nsIScriptNameSpaceManager.h
-        category: "JavaScript global privileged property",
+        category: "JavaScript-global-privileged-property",
         entry: "global"
     }],
     _xpcom_factory: {
         createInstance: function(outer, iid) {
+            dump("[narwhal][nsINarwhal::Narwhal] createInstance\n");
             if (outer != null) throw Components.results.NS_ERROR_NO_AGGREGATION;
             if (!narwhal) narwhal = new Narwhal();
             narwhal.QueryInterface(iid);
@@ -270,10 +259,22 @@ Narwhal.prototype = {
     implementationLanguage: Ci.nsIProgrammingLanguage.JAVASCRIPT,
     getHelperForLanguage: function(number) null,
     getInterfaces: function(number) {
+        dump("[narwhal][nsINarwhal::Narwhal] getInterfaces\n");
         number.value = Narwhal.Interfaces.length;
         return Narwhal.Interfaces;
     }
 };
 
 var components = [AppStartupBoot, Narwhal];
-function NSGetModule(compMgr, fileSpec) XPCOMUtils.generateModule(components);
+
+/**
+* XPCOMUtils.generateNSGetFactory was introduced in Mozilla 2 (Firefox 4).
+* XPCOMUtils.generateNSGetModule is for Mozilla 1.9.2 (Firefox 3.6).
+*/
+if (XPCOMUtils.generateNSGetFactory) {
+    dump("[narwhal][nsINarwhal] XPCOMUtils.generateNSGetFactory\n");
+
+    var NSGetFactory = XPCOMUtils.generateNSGetFactory(components);
+} else {
+    function NSGetModule(compMgr, fileSpec) XPCOMUtils.generateModule(components);
+}

@@ -10,6 +10,15 @@
 (function(scope) {
     var Cc = Components.classes;
     var Ci = Components.interfaces;
+
+    var APP_INFO = Components.classes["@mozilla.org/xre/app-info;1"].getService(Components.interfaces.nsIXULAppInfo);  
+    var VERSION_COMPARE = Cc["@mozilla.org/xpcom/version-comparator;1"].getService(Ci.nsIVersionComparator);
+    
+    var isGecko2 = (VERSION_COMPARE.compare(APP_INFO.platformVersion, "2")>=0 || APP_INFO.platformVersion.substr(0,1)=="2")?true:false;
+    if(isGecko2) {
+        Components.utils.import("resource://gre/modules/AddonManager.jsm");
+    }
+    
     scope.EXPORTED_SYMBOLS = ["get", "create"];
     var narwhal = {};
     Components.utils.import("resource://narwhal-xulrunner/embed.js", narwhal);
@@ -24,20 +33,31 @@
     var JAR_LOADER = narwhal.require("jar-loader");
 
     var sandboxes = {},
+        loadingSandboxes = {},
         globalEventListeners = [],
         allSandboxesReady = false;
 
-    scope.get = function(options) {
+    scope.get = function(options, callback) {
         if(!options || !options.type || !options.id) {
             throw new Error("Invalid program argument!");
         }
         options.internalID = options.internalID || options.id;
 
+        dump("[narwhal][sandbox::get] options.internalID: " + options.internalID + "\n");
+
         if(sandboxes[options.id]) {
-            return sandboxes[options.id];
+            if(callback) {
+                return callback(sandboxes[options.id]);
+            } else {
+                return sandboxes[options.id];
+            }
         }
 
-        return scope.create(options);
+        if(callback) {
+            return scope.create(options, callback);
+        } else {
+            return scope.create(options);
+        }
     };
 
     /**
@@ -49,104 +69,147 @@
      *   "debug": true
      * }
      */
-    scope.create = function(options) {
+    scope.create = function(options, callback) {
         if(!options || !options.type || !options.id) {
             throw new Error("Invalid program argument!");
         }
+
+        if(callback) {
+            if(loadingSandboxes[options.id]) {
+                loadingSandboxes[options.id].push(callback);
+
+                dump("[narwhal][sandbox::create] queue notify" + "\n");
+
+                return;
+            } else {
+                loadingSandboxes[options.id] = [callback];
+            }
+        }
+
+        dump("[narwhal][sandbox::create] CREATE NEW: " + options.internalID + "\n");
+
         options.internalID = options.internalID || options.id;
         options.modules = options.modules || {};
         options.debug = options.debug || false;
         try {
-            // start with the program root path and locate all resources from there
-            var programRootPath = FILE.Path(getPath(options, "/"));
+            var create = function(programRootPath) {
 
-            if(programRootPath.join("using.jar").exists()) {
-                JAR_LOADER.registerJar(
-                    programRootPath.join("using").valueOf(),
-                    programRootPath.join("using.jar").valueOf()
-                );
-            }
-            if(programRootPath.join("packages.jar").exists()) {
-                JAR_LOADER.registerJar(
-                    programRootPath.join("packages").valueOf(),
-                    programRootPath.join("packages.jar").valueOf()
-                );
-            }
-            
-            var system = UTIL.copy(narwhal.system);
-            var loader = Loader({
-                // construct own loader paths to ensure predictable environment
-                "paths": [
-                    "chrome://narwhal-xulrunner/content/lib",
-                    "chrome://narwhal-xulrunner/content/narwhal/engines/default/lib",
-                    "chrome://narwhal-xulrunner/content/narwhal/lib"
-                ]
-            });
-            options.modules["system"] = system;
-            if(!options.modules["jar-loader"]) {
-                options.modules["jar-loader"] = JAR_LOADER        // prevents module from being re-loaded in the sandbox
-            }
-            var sandbox = Sandbox({
-                "loader": loader,
-                "system": system,
-                "modules": options.modules,
-                "debug": options.debug
-            });
-
-            system = sandbox.force("system");
-            system.env["SEA"] = programRootPath.valueOf();
-            system.sea = programRootPath.valueOf();
-            sandbox("global");
-            
-            if(options.modules["packages"]) {
-                // add existing package paths to the loader
-                sandbox.paths.splice.apply(
-                    sandbox.paths,
-                    [0, sandbox.paths.length].concat(sandbox('packages').analysis.libPaths)
-                );
-                sandbox.loader.usingCatalog = sandbox('packages').usingCatalog;
-                sandbox.loader.uidCatalog = sandbox('packages').uidCatalog;
-            } else {
-                // load packages from paths
-                sandbox('packages').load([
-                    programRootPath.valueOf(),          // application/extension packages
-                    "chrome://narwhal-xulrunner/content/",
-                    "chrome://narwhal-xulrunner/content/narwhal/"
-                ]);
-            }
-
-            return sandboxes[options.id] = {
-                "id": options.id,
-                "internalID": options.internalID,
-                "require": function(id, pkg) {
-                    return sandbox(id, null, pkg);
-                },
-                "sea": programRootPath.valueOf(),
-                "system": system,
-                "modules": options.modules,
-                "paths": sandbox.paths,
-                "isReady": false,
-                "ready": function() {
-                    this.isReady = true;
-                    checkIfAllReady();
-                },
-                "onGlobalEvent": function(callback) {
-                    globalEventListeners.push(callback);
-                },
-                "dispatchGlobalEvent": function(event) {
-                    if(!allSandboxesReady) {
-                        throw new Error("Cannot dispatch global event before all sandboxes are ready!");
+                try {
+                    
+                    programRootPath = FILE.Path(programRootPath);
+        
+                    if(programRootPath.join("using.jar").exists()) {
+                        JAR_LOADER.registerJar(
+                            programRootPath.join("using").valueOf(),
+                            programRootPath.join("using.jar").valueOf()
+                        );
                     }
-                    for( var i=0, s=globalEventListeners.length ; i<s ; i++ ) {
-                        try {
-                            globalEventListeners[i](event);
-                        } catch(e) {
-                            system.log.error(e);
+                    if(programRootPath.join("packages.jar").exists()) {
+                        JAR_LOADER.registerJar(
+                            programRootPath.join("packages").valueOf(),
+                            programRootPath.join("packages.jar").valueOf()
+                        );
+                    }
+                    
+                    var system = UTIL.copy(narwhal.system);
+                    var loader = Loader({
+                        // construct own loader paths to ensure predictable environment
+                        "paths": [
+                            "chrome://narwhal-xulrunner/content/lib",
+                            "chrome://narwhal-xulrunner/content/narwhal/engines/default/lib",
+                            "chrome://narwhal-xulrunner/content/narwhal/lib"
+                        ]
+                    });
+                    options.modules["system"] = system;
+                    if(!options.modules["jar-loader"]) {
+                        options.modules["jar-loader"] = JAR_LOADER        // prevents module from being re-loaded in the sandbox
+                    }
+                    var sandbox = Sandbox({
+                        "loader": loader,
+                        "system": system,
+                        "modules": options.modules,
+                        "debug": options.debug
+                    });
+        
+                    system = sandbox.force("system");
+                    system.env["SEA"] = programRootPath.valueOf();
+                    system.sea = programRootPath.valueOf();
+                    sandbox("global");
+                    
+                    if(options.modules["packages"]) {
+                        // add existing package paths to the loader
+                        sandbox.paths.splice.apply(
+                            sandbox.paths,
+                            [0, sandbox.paths.length].concat(sandbox('packages').analysis.libPaths)
+                        );
+                        sandbox.loader.usingCatalog = sandbox('packages').usingCatalog;
+                        sandbox.loader.uidCatalog = sandbox('packages').uidCatalog;
+                    } else {
+                        // load packages from paths
+                        sandbox('packages').load([
+                            programRootPath.valueOf(),          // application/extension packages
+                            "chrome://narwhal-xulrunner/content/",
+                            "chrome://narwhal-xulrunner/content/narwhal/"
+                        ]);
+                    }
+        
+                    var ret = sandboxes[options.id] = {
+                        "id": options.id,
+                        "internalID": options.internalID,
+                        "require": function(id, pkg) {
+                            return sandbox(id, null, pkg);
+                        },
+                        "sea": programRootPath.valueOf(),
+                        "system": system,
+                        "modules": options.modules,
+                        "paths": sandbox.paths,
+                        "isReady": false,
+                        "ready": function() {
+                            this.isReady = true;
+                            checkIfAllReady();
+                        },
+                        "onGlobalEvent": function(callback) {
+                            globalEventListeners.push(callback);
+                        },
+                        "dispatchGlobalEvent": function(event) {
+                            if(!allSandboxesReady) {
+                                throw new Error("Cannot dispatch global event before all sandboxes are ready!");
+                            }
+                            for( var i=0, s=globalEventListeners.length ; i<s ; i++ ) {
+                                try {
+                                    globalEventListeners[i](event);
+                                } catch(e) {
+                                    system.log.error(e);
+                                }
+                            }
                         }
-                    }
-                }
-            }
+                    };
+                    
+                    if(callback) {
+                        for( var i=0 ; i<loadingSandboxes[options.id].length ; i++ ) {
 
+                            dump("[narwhal][sandbox::create] trigger notify" + "\n");
+
+                            loadingSandboxes[options.id][i](ret);
+                        }
+                        delete loadingSandboxes[options.id];
+                        return;
+                    }
+        
+                    return ret;
+
+                } catch(e) {
+                    narwhal.system.log.error(e);
+                }
+            };
+
+            // start with the program root path and locate all resources from there
+            if(callback) {
+                getPath(options, "/", create);
+            } else {
+                return create(getPath(options, "/"));
+            }
+            
         } catch(e) {
             narwhal.system.log.error(e);
         }
@@ -171,15 +234,26 @@
         }
     }
 
-    function getPath(options, path) {
+    function getPath(options, path, callback) {
+        var IOService = Cc['@mozilla.org/network/io-service;1'].getService(Ci.nsIIOService)
+        var FileService = IOService.getProtocolHandler("file").QueryInterface(Ci.nsIFileProtocolHandler);
         if(options.type=="extension") {
-            var em = Cc["@mozilla.org/extensions/manager;1"].getService(Ci.nsIExtensionManager);
-            return em.getInstallLocation(options.internalID).getItemFile(options.internalID, path).path;
+            if(isGecko2) {
+                AddonManager.getAddonByID(options.internalID, function(addon) {
+                    var uri = addon.getResourceURI(path);
+                    callback(FileService.getFileFromURLSpec(uri.spec).path);
+                });
+            } else {
+                var em = Cc["@mozilla.org/extensions/manager;1"].getService(Ci.nsIExtensionManager);
+                var ret = em.getInstallLocation(options.internalID).getItemFile(options.internalID, path).path;
+                if(callback) {
+                    return callback(ret);
+                }
+                return ret;
+            }
         } else
         if(options.type=="application") {
             var ResourceHandler = Cc['@mozilla.org/network/protocol;1?name=resource'].getService(Ci.nsIResProtocolHandler);
-            var IOService = Cc['@mozilla.org/network/io-service;1'].getService(Ci.nsIIOService)
-            var FileService = IOService.getProtocolHandler("file").QueryInterface(Ci.nsIFileProtocolHandler);
             return FileService.getFileFromURLSpec(ResourceHandler.resolveURI(IOService.newURI("resource:"+path, null, null))).path;
         } else
         if(options.type=="package") {
