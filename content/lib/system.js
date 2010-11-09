@@ -79,6 +79,27 @@ exports.log = new Logger((function() {
     };
 })());
 
+// print all console errors
+var theConsoleListener =
+{
+    observe:function( aMessage ){
+        if(/^\[JavaScript Warning:/.test(aMessage.message)) {
+            // skip
+        } else {
+            print(" [ JSCONSOLE ] " + aMessage.message);
+        }
+    },
+    QueryInterface: function (iid) {
+    if (!iid.equals(Components.interfaces.nsIConsoleListener) &&
+            !iid.equals(Components.interfaces.nsISupports)) {
+        throw Components.results.NS_ERROR_NO_INTERFACE;
+        }
+        return this;
+    }
+};
+MozConsole.registerListener(theConsoleListener);
+
+
 // Add app and profile directories to the prefixes if they are available
 try {
     // application directory
