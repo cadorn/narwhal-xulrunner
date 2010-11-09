@@ -112,13 +112,14 @@
                     }
                     
                     var system = UTIL.copy(narwhal.system);
+                    var defaultPaths = [
+                        "chrome:/narwhal-xulrunner/content/lib",
+                        "chrome:/narwhal-xulrunner/content/narwhal/engines/default/lib",
+                        "chrome:/narwhal-xulrunner/content/narwhal/lib"
+                    ];
                     var loader = Loader({
                         // construct own loader paths to ensure predictable environment
-                        "paths": [
-                            "chrome://narwhal-xulrunner/content/lib",
-                            "chrome://narwhal-xulrunner/content/narwhal/engines/default/lib",
-                            "chrome://narwhal-xulrunner/content/narwhal/lib"
-                        ]
+                        "paths": [].concat(defaultPaths)
                     });
                     options.modules["system"] = system;
                     if(!options.modules["jar-loader"]) {
@@ -135,7 +136,7 @@
                     system.env["SEA"] = programRootPath.valueOf();
                     system.sea = programRootPath.valueOf();
                     sandbox("global");
-                    
+
                     if(options.modules["packages"]) {
                         // add existing package paths to the loader
                         sandbox.paths.splice.apply(
@@ -151,8 +152,24 @@
                             "chrome://narwhal-xulrunner/content/",
                             "chrome://narwhal-xulrunner/content/narwhal/"
                         ]);
+                        
+                        // NOTE: the paths are messed up after the packages are loaded
+                        //       so we set them correctly again by removing default paths first and
+                        //       readding them in correct order
+                        for( var i=0 ; i<sandbox.paths.length ; i++ ) {
+                            for( var j in defaultPaths ) {
+                                if(defaultPaths[j]==sandbox.paths[i]) {
+                                    delete sandbox.paths[i];
+                                    break;
+                                }
+                            }
+                        }
+                        // NOTE: This puts the narwhal engine and platform modules at the *TOP* of the search path
+                        for( var i=(defaultPaths.length-1) ; i>=0 ; i-- ) {
+                            sandbox.paths.unshift(defaultPaths[i]);
+                        }
                     }
-        
+
                     var ret = sandboxes[options.id] = {
                         "id": options.id,
                         "internalID": options.internalID,
