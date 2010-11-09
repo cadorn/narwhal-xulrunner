@@ -5,6 +5,9 @@ for (var name in QE) {
     exports[name] = QE[name];
 }
 
+exports.enqueue = exports.setTimeout;
+
+/*
 exports.setTimeout = function () {
     throw "NYI";
 };
@@ -21,3 +24,4 @@ exports.clearInterval = function () {
     throw "NYI";
 };
 
+*/
