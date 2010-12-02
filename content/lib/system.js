@@ -38,6 +38,8 @@ var env = exports.env = {
 [
     "nsINarwhal_NARWHAL_URI",
     "nsINarwhal_ENGINE_URI",
+    "nsINarwhal_DEBUG",
+    "nsINarwhal_VERBOSE",
     "TERM",
     "PWD",
     "NARWHAL_HOME",
@@ -97,7 +99,10 @@ var theConsoleListener =
         return this;
     }
 };
-MozConsole.registerListener(theConsoleListener);
+if(env["nsINarwhal_DEBUG"] && env["nsINarwhal_DEBUG"]=="true") {
+    dump("\n########## DEBUG ENABLED ##########\n\n");
+    MozConsole.registerListener(theConsoleListener);
+}
 
 
 // Add app and profile directories to the prefixes if they are available
