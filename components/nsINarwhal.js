@@ -46,12 +46,12 @@ function loadNarwhalConfig() {
             return;
         }
         var config = JSON.parse(readFile(prefFile));
-        if(config.hasOwnProperty("BOOTSTRAP_URI"))
-            EXTENSION_BOOTSTRAP_URI = config.BOOTSTRAP_URI;
-        if(config.hasOwnProperty("ENGINE_URI"))
-            EXTENSION_ENGINE_URI = config.ENGINE_URI;
-        if(config.hasOwnProperty("NARWHAL_URI"))
-            EXTENSION_NARWHAL_URI = config.NARWHAL_URI;
+//        if(config.hasOwnProperty("BOOTSTRAP_URI"))
+//            EXTENSION_BOOTSTRAP_URI = config.BOOTSTRAP_URI;
+//        if(config.hasOwnProperty("ENGINE_URI"))
+//            EXTENSION_ENGINE_URI = config.ENGINE_URI;
+//        if(config.hasOwnProperty("NARWHAL_URI"))
+//            EXTENSION_NARWHAL_URI = config.NARWHAL_URI;
         if(config.hasOwnProperty("DEBUG"))
             EXTENSION_DEBUG = config.DEBUG;
         if(config.hasOwnProperty("VERBOSE"))
