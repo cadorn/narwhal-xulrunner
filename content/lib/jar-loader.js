@@ -18,10 +18,14 @@
  *   
  */
 
-//function dump(msg)
-//{
-//    Components.utils.reportError(msg);
-//}
+var DEBUG = false;
+
+if(DEBUG) {
+    function dump(msg)
+    {
+        Components.utils.reportError(msg);
+    }
+}
 
 var IO = require("./io").IO;
 var UTIL = require("util");
@@ -151,26 +155,27 @@ exports.registerJar = function(matchPath, archiveFile, basePath) {
 exports.mapPath = function(method, path) {
     path = fixPathUri(path);
 
-//dump("mapPath:path: "+path);
-    
+if(DEBUG) dump("mapPath:path("+method+"): "+path);
+
     // map chrome:// URIs to filesystem paths if resources are not jarred
     if(EngineUriPath && path.substr(0,nsINarwhal_ENGINE_URI.length)==nsINarwhal_ENGINE_URI) {
         if(isWindows) {
             path = path.replace(/\//g, "\\");
         }
-//dump("mapPath:EngineUriPath: "+EngineUriPath + "|<->|" + path.substr(nsINarwhal_ENGINE_URI.length));
+if(DEBUG) dump("mapPath:EngineUriPath: "+EngineUriPath + "|<->|" + path.substr(nsINarwhal_ENGINE_URI.length));
         return {"path": EngineUriPath + path.substr(nsINarwhal_ENGINE_URI.length)};
     }
     if(NarwhalUriPath && path.substr(0,nsINarwhal_NARWHAL_URI.length)==nsINarwhal_NARWHAL_URI) {
         if(isWindows) {
             path = path.replace(/\//g, "\\");
         }
-//dump("mapPath:NarwhalUriPath: "+NarwhalUriPath + "|<->|" + path.substr(nsINarwhal_NARWHAL_URI.length));
+if(DEBUG) dump("mapPath:NarwhalUriPath: "+NarwhalUriPath + "|<->|" + path.substr(nsINarwhal_NARWHAL_URI.length));
         return {"path": NarwhalUriPath + path.substr(nsINarwhal_NARWHAL_URI.length)};
     }
 
     for( var dir in jars ) {
         if(path==jars[dir].archiveFile) {
+if(DEBUG) dump("mapPath:it's an archive file");
             return false;
         }
         if(path==dir.replace(/\\/g, "/") || path.substr(0,dir.length+1)==dir.replace(/\\/g, "/")+"/") {
@@ -180,6 +185,7 @@ exports.mapPath = function(method, path) {
             if(method.substr(0,1)!="!") {
                 print("MATCH["+method+"] " + usingPath);
             }
+if(DEBUG) dump("mapPath-->archive("+jars[dir]+"),path: "+(((jars[dir].basePath)?jars[dir].basePath+"/":"") + usingPath));
 
             return {
                 "archive": jars[dir],
@@ -187,7 +193,17 @@ exports.mapPath = function(method, path) {
             }
         }
     }
-    return false;
+
+if(DEBUG) dump("mapPath:PURE-orig: "+path);
+
+    if(isWindows) {
+        path = path.replace(/\//g, "\\");
+    }
+
+if(DEBUG) dump("mapPath:PURE-norm: "+path);
+
+    return {"path": path};
+//    return false;
 }
 
 
